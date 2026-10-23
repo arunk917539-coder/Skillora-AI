@@ -1,0 +1,51 @@
+
+# Secrets
+.env
+.env.*
+!.env.example
+.npmrc
+*.pem
+*.key
+*.p12
+*.pfx
+*credentials*.json
+*secret*.json
+
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+.vercel/
+.turbo/
+
+# Generated files
+dist/
+build/
+out/
+coverage/
+*.tsbuildinfo
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs and backups
+*.log
+*.zip
+*.bak
+
+
+# Additional generated files
+.test-build/
+next-env.d.ts
+*.tsbuildinfo
+
+# Editor settings
+.vscode/
+.idea/
+
+# Temporary backups
+*.backup-*
+

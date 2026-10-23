@@ -1,0 +1,101 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String              @id @default(cuid())
+  name          String?
+  email         String              @unique
+  password      String?
+  emailVerified DateTime?
+  image         String?
+  role          String              @default("user")
+  accounts      Account[]
+  interviews    Interview[]
+  feedBack      InterviewFeedback[]
+  hrQuestions   HrQuestion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Interview {
+  id              String             @id @default(cuid())
+  name            String
+  userId          String
+  type            String
+  techStack       String[]
+  role            String
+  experience      String
+  difficultyLevel String
+  noOfQuestions   Int
+  createdAt       DateTime           @default(now())
+  isCompleted     Boolean?           @default(false)
+  questions       String[]
+  expectedAnswers String[]           @default([])
+  feedBack        InterviewFeedback?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model InterviewFeedback {
+  id                  String    @id @default(cuid())
+  interviewId         String    @unique
+  userId              String
+  feedBack            String
+  problemSolving      Int
+  systemDesign        Int
+  communicationSkills Int
+  technicalAccuracy   Int
+  behavioralResponses Int
+  timeManagement      Int
+  answers             String?
+  competencyScores    String?
+  recommendations     String?
+  rubricVersion       String    @default("workplace-rubric-v1")
+  createdAt           DateTime  @default(now())
+  interview           Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model HrQuestion {
+  id             String   @id @default(cuid())
+  userId         String
+  title          String
+  category       String
+  difficulty     String   @default("Medium")
+  question       String
+  expectedAnswer String
+  competencies   String[] @default(["communication"])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
@@ -8,8 +8,9 @@ import { DevelopmentPlan } from "@/app/components/dashboard/development-plan";
 import type { DevelopmentAction } from "@/app/lib/workplace/development-plans";
 import type { CompetencyScores } from "@/app/lib/workplace/scoring";
 import { parseStoredArray, parseStoredNumberRecord } from "@/app/lib/workplace/safe-json";
-import { ArrowLeft, ArrowRight, CheckCircle2, AlertCircle, Sparkles, Target, Cpu, ShieldAlert } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, AlertCircle, Sparkles, Target, Cpu, ShieldAlert, RefreshCw } from "lucide-react";
 import Link from "next/link";
+import { EvaluationProgress } from "./evaluation-progress";
 
 type EvaluatedAnswer = {
   question: string;
@@ -57,9 +58,29 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
   const router = useRouter();
   const questions = Array.isArray(assessment.questions) ? assessment.questions : [];
   const expectedAnswersList = Array.isArray(assessment.expectedAnswers) ? assessment.expectedAnswers : [];
-  const [answers, setAnswers] = useState<string[]>(questions.map(() => ""));
+
+  // Restore previously saved answers if evaluation timed out or was interrupted
+  const initialAnswers = () => {
+    if (assessment.feedBack?.answers) {
+      try {
+        const parsed = JSON.parse(assessment.feedBack.answers);
+        if (Array.isArray(parsed)) {
+          return questions.map((q, i) => {
+            const match = parsed.find((p: unknown) => p && typeof p === "object" && (p as { question?: string }).question === q) || parsed[i];
+            return match && typeof match === "object" && typeof (match as { answer?: string }).answer === "string"
+              ? (match as { answer: string }).answer
+              : "";
+          });
+        }
+      } catch {}
+    }
+    return questions.map(() => "");
+  };
+
+  const [answers, setAnswers] = useState<string[]>(initialAnswers);
   const [index, setIndex] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [submissionStartTime, setSubmissionStartTime] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [consentAcknowledged, setConsentAcknowledged] = useState(false);
   const [result, setResult] = useState<{
@@ -70,17 +91,53 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
     scores?: EvaluatedAnswer[];
   } | null>(null);
 
+  const isSubmittingRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Prevent accidental tab closure or reload during running AI evaluation
+  useEffect(() => {
+    if (!busy) return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [busy]);
+
+  const cancelEvaluation = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    isSubmittingRef.current = false;
+    setBusy(false);
+    setSubmissionStartTime(null);
+    setError("Assessment evaluation was cancelled. You can review or edit your answers before submitting again.");
+  };
+
   async function submit() {
+    if (isSubmittingRef.current || busy) return;
+
     if (!consentAcknowledged) {
       setError("Please acknowledge the AI evaluation notice before submitting.");
       return;
     }
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    isSubmittingRef.current = true;
     setBusy(true);
+    setSubmissionStartTime(Date.now());
     setError("");
+
     try {
       const response = await fetch("/api/interview/complete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           id: assessment.id,
           consentAcknowledged: true,
@@ -99,10 +156,16 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
         recommendations: data.recommendations,
         scores: data.scores,
       });
-    } catch (e) {
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === "AbortError") {
+        return;
+      }
       setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
+      isSubmittingRef.current = false;
       setBusy(false);
+      setSubmissionStartTime(null);
+      abortControllerRef.current = null;
     }
   }
 
@@ -157,21 +220,26 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
 
     const evaluatedAnswers: EvaluatedAnswer[] = result?.scores || storedAnswers || [];
 
-    // Overall score calculation
-    const score =
-      result?.average ??
-      (evaluatedAnswers.length > 0
-        ? Math.round(evaluatedAnswers.reduce((sum, item) => sum + item.score, 0) / evaluatedAnswers.length)
-        : storedFeedback
-        ? Math.round(
-            (storedFeedback.problemSolving +
-              storedFeedback.systemDesign +
-              storedFeedback.communicationSkills +
-              storedFeedback.technicalAccuracy +
-              storedFeedback.behavioralResponses) /
-              5
-          )
-        : 0);
+    // Task 4: Overall score calculation strictly bounded between 0 and 100
+    const score = Math.max(
+      0,
+      Math.min(
+        100,
+        result?.average ??
+          (evaluatedAnswers.length > 0
+            ? Math.round(evaluatedAnswers.reduce((sum, item) => sum + item.score, 0) / evaluatedAnswers.length)
+            : storedFeedback
+            ? Math.round(
+                (storedFeedback.problemSolving +
+                  storedFeedback.systemDesign +
+                  storedFeedback.communicationSkills +
+                  storedFeedback.technicalAccuracy +
+                  storedFeedback.behavioralResponses) /
+                  5
+              )
+            : 0)
+      )
+    );
 
     const allStrengths = [
       ...new Set(evaluatedAnswers.flatMap((item) => item.strengths || [])),
@@ -211,19 +279,19 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
         </CardHeader>
 
         <CardContent className="space-y-8 p-6 sm:p-8">
-          {/* AI ASSESSMENT SAFEGUARD & HUMAN REVIEW NOTICE */}
-          <div className="rounded-2xl border border-amber-500/25 bg-amber-500/10 p-4 text-xs text-amber-200/90 leading-relaxed space-y-2">
-            <div className="flex items-center gap-2 font-semibold text-amber-300">
-              <ShieldAlert className="h-4 w-4 shrink-0" />
+          {/* Task 7: AI ASSESSMENT SAFEGUARD & HUMAN REVIEW NOTICE (Clean dark enterprise card) */}
+          <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4 sm:p-5 text-xs text-slate-300 leading-relaxed space-y-2.5 backdrop-blur-md">
+            <div className="flex items-center gap-2 font-semibold text-slate-200">
+              <Sparkles className="h-4 w-4 text-violet-400 shrink-0" />
               <span>Formative Practice Feedback Notice</span>
             </div>
-            <p className="text-slate-300">
-              This assessment was evaluated using a local Ollama AI model against predetermined workplace competency rubrics.
-              Scores and insights are advisory learning tools for professional reflection, not standardized psychometrics or certified hiring signals.
-              Organizational policies must require meaningful human review before making consequential employment or promotion decisions.
+            <p className="text-slate-300 text-[11px] sm:text-xs">
+              This assessment was evaluated locally using Ollama AI against structured workplace competency rubrics.
+              Scores and insights are advisory learning tools for professional reflection, not standardized psychometrics or automated hiring decisions.
+              Meaningful human review is recommended before making organizational development or assignment decisions.
             </p>
-            <div className="pt-1 flex items-center justify-between border-t border-amber-500/20 text-[11px]">
-              <span className="text-slate-400">Questions or discrepancy in feedback?</span>
+            <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-white/5 text-[11px]">
+              <span className="text-slate-400">Questions regarding evaluation criteria?</span>
               <Link href="/privacy" className="text-violet-400 underline hover:text-violet-300 font-medium">
                 Review Privacy & Human Review Policy
               </Link>
@@ -289,10 +357,10 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
 
                     {/* 3. Expected answer */}
                     <div className="space-y-1">
-                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-violet-400">
                         3. Authoritative Strong Response Criteria
                       </h4>
-                      <div className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-4 text-xs sm:text-sm text-amber-200/90 leading-relaxed">
+                      <div className="rounded-xl border border-violet-500/25 bg-violet-950/20 p-4 text-xs sm:text-sm text-violet-200/90 leading-relaxed">
                         <p className="italic">{expectedAns}</p>
                       </div>
                     </div>
@@ -425,10 +493,10 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
               </div>
 
               <div className="space-y-1">
-                <h4 className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                <h4 className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">
                   Development Opportunities
                 </h4>
-                <div className="rounded-xl border border-amber-500/20 bg-amber-950/20 p-4 text-xs text-amber-200/90">
+                <div className="rounded-xl border border-indigo-500/20 bg-indigo-950/20 p-4 text-xs text-indigo-200/90">
                   {allImprovements.length > 0 ? (
                     <ul className="list-disc pl-5 space-y-1">
                       {allImprovements.map((imp, i) => (
@@ -490,7 +558,17 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
   }
 
   return (
-    <Card className="mx-auto my-8 max-w-3xl border border-white/10 bg-slate-900/80 backdrop-blur-xl shadow-2xl rounded-3xl overflow-hidden">
+    <>
+      {busy && (
+        <EvaluationProgress
+          assessmentName={assessment.name}
+          scenarioCount={questions.length}
+          startTime={submissionStartTime ?? Date.now()}
+          onCancel={cancelEvaluation}
+        />
+      )}
+
+      <Card className="mx-auto my-8 max-w-3xl border border-white/10 bg-slate-900/80 backdrop-blur-xl shadow-2xl rounded-3xl overflow-hidden">
       <CardHeader className="border-b border-white/10 p-6 sm:p-8 bg-slate-900/90 space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold uppercase tracking-wider text-violet-400 bg-violet-950/60 border border-violet-500/30 px-3 py-1 rounded-full">
@@ -573,12 +651,12 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
             >
               {busy ? (
                 <>
-                  <Cpu className="h-4 w-4 animate-spin" />
+                  <Cpu className="h-4 w-4 animate-spin motion-reduce:animate-none" />
                   <span>Evaluating with Ollama AI…</span>
                 </>
               ) : (
                 <>
-                  <span>Complete Assessment</span>
+                  <span>Submit Assessment</span>
                   <CheckCircle2 className="h-4 w-4" />
                 </>
               )}
@@ -587,9 +665,27 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
         </div>
 
         {error && (
-          <div role="alert" className="flex items-start gap-2.5 rounded-xl border border-rose-800/40 bg-rose-950/40 p-3.5 text-xs text-rose-300">
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-rose-400" />
-            <span>{error}</span>
+          <div
+            role="alert"
+            className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-rose-800/40 bg-rose-950/40 p-4 text-xs text-rose-300"
+          >
+            <div className="flex items-start gap-2.5">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-rose-400" />
+              <div>
+                <p className="font-semibold text-rose-200">Evaluation Interrupted</p>
+                <p className="text-rose-300/90 mt-0.5 leading-relaxed">{error}</p>
+                <p className="text-[11px] text-slate-400 mt-1">Your written responses are preserved.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={submit}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-medium text-xs transition-colors shrink-0 cursor-pointer shadow-md disabled:opacity-40"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              <span>Retry Evaluation</span>
+            </button>
           </div>
         )}
 
@@ -601,5 +697,6 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
         </div>
       </CardContent>
     </Card>
+    </>
   );
 }

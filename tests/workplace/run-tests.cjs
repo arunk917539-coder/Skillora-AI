@@ -594,5 +594,108 @@ test("evaluateWithOllama handles partial responses with proportionate partial cr
   }
 });
 
+test("HR question lifecycle supports draft, published, and archived statuses", () => {
+  // Test Draft status
+  const draftCriteria = {
+    version: 1,
+    expectedAnswer: "Align on delivery milestones with team.",
+    status: "draft",
+    isArchived: false,
+    competencies: ["collaboration", "planning"],
+  };
+  const serializedDraft = serializeHrScenarioCriteria(draftCriteria);
+  const parsedDraft = parseHrScenarioCriteria(serializedDraft);
+  assert.equal(parsedDraft.status, "draft");
+  assert.equal(parsedDraft.isArchived, false);
+  assert.deepEqual(parsedDraft.competencies, ["collaboration", "planning"]);
+
+  // Test Published status
+  const publishedCriteria = {
+    version: 2,
+    expectedAnswer: "Proactively communicate deadline trade-offs.",
+    status: "published",
+    isArchived: false,
+    competencies: ["communication", "problemSolving"],
+  };
+  const serializedPublished = serializeHrScenarioCriteria(publishedCriteria);
+  const parsedPublished = parseHrScenarioCriteria(serializedPublished);
+  assert.equal(parsedPublished.status, "published");
+  assert.equal(parsedPublished.isArchived, false);
+  assert.deepEqual(parsedPublished.competencies, ["communication", "problemSolving"]);
+
+  // Test Archived status
+  const archivedCriteria = {
+    version: 3,
+    expectedAnswer: "Legacy expected response.",
+    status: "archived",
+    isArchived: true,
+  };
+  const serializedArchived = serializeHrScenarioCriteria(archivedCriteria);
+  const parsedArchived = parseHrScenarioCriteria(serializedArchived);
+  assert.equal(parsedArchived.status, "archived");
+  assert.equal(parsedArchived.isArchived, true);
+
+  // Backward compatibility: default status for unannotated payload is published
+  const legacyPayload = JSON.stringify({ version: 1, expectedAnswer: "Legacy payload answer.", isArchived: false });
+  const parsedLegacy = parseHrScenarioCriteria(legacyPayload);
+  assert.equal(parsedLegacy.status, "published");
+  assert.equal(parsedLegacy.isArchived, false);
+});
+
+test("evaluateWorkplaceAnswer with HR snapshot uses authored reference answer and competencies", async () => {
+  const customQuestion = "A team member repeatedly misses deadlines due to undefined requirements. How do you intervene?";
+  const hrSnapshot = serializeHrScenarioCriteria({
+    version: 2,
+    expectedAnswer: "Meet 1-on-1 to clarify scope, establish a RACI matrix, and schedule bi-weekly check-ins.",
+    competencies: ["collaboration", "planning"],
+    requiredConcepts: ["1-on-1 meeting", "clarify scope", "check-ins"],
+  });
+  const candidateAnswer = "I will schedule a 1-on-1 meeting to clarify scope and establish regular check-ins.";
+
+  const mockPayload = {
+    score: 88,
+    competencies: { collaboration: 90, planning: 86 },
+    evidence: ["schedule a 1-on-1 meeting to clarify scope"],
+    strengths: ["Direct proactive resolution"],
+    improvements: ["Consider RACI framework"],
+    criterionEvaluations: [
+      { competency: "collaboration", score: 90, evidence: ["schedule a 1-on-1 meeting to clarify scope"], missingEvidence: [], rationale: "Collaborative 1-on-1" },
+      { competency: "planning", score: 86, evidence: ["establish regular check-ins"], missingEvidence: [], rationale: "Planning structured check-ins" },
+    ],
+  };
+
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response(JSON.stringify({ message: { content: JSON.stringify(mockPayload) } }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+
+  try {
+    const result = await evaluateWorkplaceAnswer(customQuestion, candidateAnswer, hrSnapshot);
+    assert.equal(result.score, 88);
+    assert.equal(result.exampleStrongResponse, "Meet 1-on-1 to clarify scope, establish a RACI matrix, and schedule bi-weekly check-ins.");
+    assert.equal(result.competencies.collaboration, 90);
+    assert.equal(result.competencies.planning, 86);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("evaluateWorkplaceAnswer rejects missing reference answer safely", async () => {
+  const customQuestion = "Some unknown situation";
+  const emptySnapshot = serializeHrScenarioCriteria({
+    version: 1,
+    expectedAnswer: "",
+  });
+
+  await assert.rejects(
+    async () => {
+      await evaluateWorkplaceAnswer(customQuestion, "Some answer", emptySnapshot);
+    },
+    { message: /Authoritative reference answer is missing/ }
+  );
+});
+
+
 
 

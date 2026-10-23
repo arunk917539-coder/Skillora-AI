@@ -1,4 +1,5 @@
 import React from "react";
+import { ScrollReveal } from "../ui/scroll-reveal";
 
 const workplaceBenefits = [
   { label: "Realistic Scenarios", accent: "text-cyan-400 border-cyan-500/20 bg-cyan-950/20" },
@@ -14,12 +15,14 @@ const SubBanner = () => {
   return (
     <section className="hidden md:flex flex-wrap justify-center gap-3.5 px-4 my-8 md:my-12">
       {workplaceBenefits.map((item, index) => (
-        <span
+        <ScrollReveal
           key={index}
+          delay={index * 40}
+          as="span"
           className={`text-sm font-medium ${item.accent} px-4 py-2 rounded-full border shadow-sm backdrop-blur transition-all duration-300 hover:scale-105 hover:brightness-125 cursor-default`}
         >
           {item.label}
-        </span>
+        </ScrollReveal>
       ))}
     </section>
   );

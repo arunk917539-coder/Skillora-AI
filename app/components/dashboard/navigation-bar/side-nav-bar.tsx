@@ -15,21 +15,22 @@ const Tabitems = [
 
 export type AppSideBar = {
   callBack: Dispatch<SetStateAction<boolean>>;
+  isHr?: boolean;
 };
 
-export function AppSidebar(AppSideBarProp: AppSideBar) {
+export function AppSidebar({ callBack, isHr: isHrProp }: AppSideBar) {
   const session = useSession();
   const user = session.data?.user;
-  const isHr = (user as { role?: string | null })?.role === "hr";
+  const isHr = isHrProp ?? ((user as { role?: string | null })?.role === "hr");
   const tabItems = isHr
-    ? [...Tabitems, { value: "Manage Scenarios", key: "hr_questions" }]
+    ? [...Tabitems, { value: "Manage Questions", key: "hr_questions" }]
     : Tabitems;
 
   return (
     <div className="fixed inset-y-0 left-0 z-50 flex w-4/5 max-w-xs flex-col justify-between border-r border-white/10 bg-slate-900/95 p-6 backdrop-blur-xl lg:hidden shadow-2xl">
       <div className="flex flex-col gap-8">
         <div className="flex items-center justify-between">
-          <Link href="/" onClick={() => AppSideBarProp.callBack(false)}>
+          <Link href="/" onClick={() => callBack(false)}>
             <div className="relative h-9 w-40">
               <Image
                 src="/skillora-horizontal.png"
@@ -40,7 +41,7 @@ export function AppSidebar(AppSideBarProp: AppSideBar) {
             </div>
           </Link>
           <button
-            onClick={() => AppSideBarProp.callBack(false)}
+            onClick={() => callBack(false)}
             className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/5"
             aria-label="Close menu"
           >
@@ -53,7 +54,7 @@ export function AppSidebar(AppSideBarProp: AppSideBar) {
             <TabsTrigger
               key={index}
               value={item.key}
-              onClick={() => AppSideBarProp.callBack(false)}
+              onClick={() => callBack(false)}
               className="justify-start px-4 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all"
             >
               {item.value}

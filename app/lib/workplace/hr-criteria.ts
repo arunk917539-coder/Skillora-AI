@@ -1,3 +1,5 @@
+export type QuestionStatus = "draft" | "published" | "archived";
+
 export type HrScenarioCriteria = {
   version: number;
   expectedAnswer: string;
@@ -7,6 +9,8 @@ export type HrScenarioCriteria = {
   criticalErrors: string[];
   scoringGuidance?: string;
   isArchived: boolean;
+  status: QuestionStatus;
+  competencies?: string[];
 };
 
 /**
@@ -22,6 +26,7 @@ export function parseHrScenarioCriteria(raw: string): HrScenarioCriteria {
       acceptableAlternatives: [],
       criticalErrors: [],
       isArchived: false,
+      status: "published",
     };
   }
 
@@ -30,6 +35,18 @@ export function parseHrScenarioCriteria(raw: string): HrScenarioCriteria {
     try {
       const parsed = JSON.parse(trimmed);
       if (parsed && typeof parsed === "object" && typeof parsed.expectedAnswer === "string") {
+        const isArchived = Boolean(parsed.isArchived || parsed.status === "archived");
+        const status: QuestionStatus =
+          parsed.status === "draft" || parsed.status === "archived" || parsed.status === "published"
+            ? parsed.status
+            : isArchived
+            ? "archived"
+            : "published";
+
+        const competencies = Array.isArray(parsed.competencies)
+          ? parsed.competencies.map(String).filter(Boolean)
+          : undefined;
+
         return {
           version: typeof parsed.version === "number" ? parsed.version : 1,
           expectedAnswer: parsed.expectedAnswer,
@@ -38,7 +55,9 @@ export function parseHrScenarioCriteria(raw: string): HrScenarioCriteria {
           acceptableAlternatives: Array.isArray(parsed.acceptableAlternatives) ? parsed.acceptableAlternatives.map(String).filter(Boolean) : [],
           criticalErrors: Array.isArray(parsed.criticalErrors) ? parsed.criticalErrors.map(String).filter(Boolean) : [],
           scoringGuidance: typeof parsed.scoringGuidance === "string" ? parsed.scoringGuidance : undefined,
-          isArchived: Boolean(parsed.isArchived),
+          isArchived,
+          status,
+          competencies,
         };
       }
     } catch {
@@ -53,6 +72,7 @@ export function parseHrScenarioCriteria(raw: string): HrScenarioCriteria {
     acceptableAlternatives: [],
     criticalErrors: [],
     isArchived: false,
+    status: "published",
   };
 }
 
@@ -62,6 +82,13 @@ export function parseHrScenarioCriteria(raw: string): HrScenarioCriteria {
 export function serializeHrScenarioCriteria(
   criteria: Partial<HrScenarioCriteria> & { expectedAnswer: string }
 ): string {
+  const isArchived = Boolean(criteria.isArchived || criteria.status === "archived");
+  const status: QuestionStatus = criteria.status
+    ? criteria.status
+    : isArchived
+    ? "archived"
+    : "published";
+
   const payload: HrScenarioCriteria = {
     version: criteria.version ?? 1,
     expectedAnswer: criteria.expectedAnswer,
@@ -70,7 +97,9 @@ export function serializeHrScenarioCriteria(
     acceptableAlternatives: criteria.acceptableAlternatives || [],
     criticalErrors: criteria.criticalErrors || [],
     scoringGuidance: criteria.scoringGuidance?.trim() || undefined,
-    isArchived: Boolean(criteria.isArchived),
+    isArchived,
+    status,
+    competencies: criteria.competencies || undefined,
   };
   return JSON.stringify(payload);
 }

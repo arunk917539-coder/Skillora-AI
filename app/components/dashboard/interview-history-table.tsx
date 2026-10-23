@@ -117,11 +117,21 @@ export const columns: ColumnDef<InterviewHistoryType>[] = [
         Competency Focus
       </span>
     ),
-    cell: ({ row }) => (
-      <span className="text-xs font-medium text-violet-300 bg-violet-950/40 border border-violet-500/20 px-2.5 py-0.5 rounded-full">
-        {row.getValue<string>("type") || "General"}
-      </span>
-    ),
+    cell: ({ row }) => {
+      const type = row.getValue<string>("type") || "General";
+      const isHr = type === "HR Questions";
+      return (
+        <span
+          className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-0.5 rounded-full border ${
+            isHr
+              ? "bg-gradient-to-r from-violet-950/80 to-indigo-950/80 border-violet-400/40 text-violet-200 shadow-sm"
+              : "text-violet-300 bg-violet-950/40 border-violet-500/20"
+          }`}
+        >
+          {type}
+        </span>
+      );
+    },
     size: 150,
   },
   {

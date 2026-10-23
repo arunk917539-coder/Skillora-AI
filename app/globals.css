@@ -141,6 +141,28 @@
   .blue-head {
     @apply bg-gradient-to-r from-violet-500/15 to-blue-500/15 border border-violet-500/30 text-violet-300 px-3.5 py-1.5 rounded-xl;
   }
+
+  /* Subtle scroll reveal animations */
+  .reveal-init {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+  }
+
+  .reveal-active {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-init,
+  .reveal-active {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
 }
 
 .primary-button {

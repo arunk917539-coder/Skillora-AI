@@ -10,6 +10,7 @@ import { prisma } from "@/prisma/prisma";
 import { revalidatePath } from "next/cache";
 
 import { CATEGORIES, selectScenarios } from "@/app/lib/workplace/scenarios";
+import { parseHrScenarioCriteria, serializeHrScenarioCriteria } from "@/app/lib/workplace/hr-criteria";
 
 export async function handleCreateInterviewFormAction(
   _prevState: CreateAssessmentState,
@@ -19,31 +20,81 @@ export async function handleCreateInterviewFormAction(
     const session = await auth();
     const userId = session?.user?.id;
     if (!userId) return { success: false, errors: { general: "Please sign in to create an assessment." } };
-    const customQuestionId = formData.get("customQuestionId");
-    if (typeof customQuestionId === "string" && customQuestionId.trim()) {
-      const customQ = await prisma.hrQuestion.findUnique({
-        where: { id: customQuestionId.trim() },
-      });
-      if (!customQ) {
-        return { success: false, errors: { general: "Selected custom scenario question was not found." } };
+
+    const rawSelectedIds = formData.getAll("selectedHrQuestionIds").map(String).filter(Boolean);
+    const legacyCustomId = formData.get("customQuestionId");
+    const candidateIds = rawSelectedIds.length > 0
+      ? rawSelectedIds
+      : (typeof legacyCustomId === "string" && legacyCustomId.trim() ? [legacyCustomId.trim()] : []);
+
+    const assessmentSource = formData.get("assessmentSource");
+    const isHrQuestions = assessmentSource === "custom" || assessmentSource === "hr_questions" || candidateIds.length > 0;
+
+    if (isHrQuestions) {
+      if (candidateIds.length === 0) {
+        return { success: false, errors: { general: "Please select at least one published question for this assessment." } };
       }
+
+      const uniqueIds = [...new Set(candidateIds)];
+      if (uniqueIds.length > 5) {
+        return { success: false, errors: { general: "You may select at most 5 questions per assessment." } };
+      }
+
+      const hrQuestions = await prisma.hrQuestion.findMany({
+        where: { id: { in: uniqueIds } },
+      });
+
+      if (hrQuestions.length === 0) {
+        return { success: false, errors: { general: "Selected questions were not found." } };
+      }
+
+      // Check each question is published and not archived
+      const validQuestions = hrQuestions.filter((q) => {
+        const criteria = parseHrScenarioCriteria(q.expectedAnswer);
+        return criteria.status === "published" && !criteria.isArchived;
+      });
+
+      if (validQuestions.length !== uniqueIds.length) {
+        return {
+          success: false,
+          errors: { general: "One or more selected questions are not published or have been archived." },
+        };
+      }
+
+      // Maintain order of selection
+      const orderedQuestions = uniqueIds.map((id) => validQuestions.find((q) => q.id === id)!);
       const rawTitle = formData.get("name");
       const title = typeof rawTitle === "string" && rawTitle.trim().length >= 2
         ? rawTitle.trim()
-        : customQ.title;
+        : orderedQuestions.length === 1
+        ? orderedQuestions[0].title
+        : "HR Workplace Assessment";
+
+      const storedDifficulty = orderedQuestions.every((q) => q.difficulty === orderedQuestions[0].difficulty)
+        ? orderedQuestions[0].difficulty
+        : "Mixed";
+
+      const questions = orderedQuestions.map((q) => q.question);
+      const expectedAnswers = orderedQuestions.map((q) => {
+        const criteria = parseHrScenarioCriteria(q.expectedAnswer);
+        return serializeHrScenarioCriteria({
+          ...criteria,
+          competencies: q.competencies,
+        });
+      });
 
       const assessment = await prisma.interview.create({
         data: {
           name: title,
           userId,
-          type: customQ.category,
+          type: "HR Questions",
           techStack: ["Communication", "Teamwork", "Problem solving", "Professional judgement"],
           role: "Workplace Behaviour",
           experience: "All levels",
-          difficultyLevel: customQ.difficulty,
-          noOfQuestions: 1,
-          questions: [customQ.question],
-          expectedAnswers: [customQ.expectedAnswer],
+          difficultyLevel: storedDifficulty,
+          noOfQuestions: orderedQuestions.length,
+          questions,
+          expectedAnswers,
           isCompleted: false,
         },
         select: { id: true },
@@ -56,7 +107,7 @@ export async function handleCreateInterviewFormAction(
       name: z.string().trim().min(2).max(100),
       type: z.enum(CATEGORIES),
       difficultyLevel: z.enum(["Easy", "Medium", "Hard"]),
-      numberOfQuestions: z.coerce.number().int().min(1).max(3),
+      numberOfQuestions: z.coerce.number().int().min(1).max(5),
     }).parse({
       name: formData.get("name"),
       type: formData.get("type"),

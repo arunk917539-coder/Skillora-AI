@@ -2,11 +2,12 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, ShieldCheck, Cpu, Target, Sparkles } from "lucide-react";
+import { ScrollReveal } from "../ui/scroll-reveal";
 
 const MainBanner = () => {
   return (
     <section className="relative pt-12 pb-16 md:pt-20 md:pb-24 items-center w-full justify-between flex flex-col-reverse xl:flex-row gap-12">
-      <div className="flex items-center xl:items-start gap-8 flex-col max-w-2xl">
+      <ScrollReveal delay={50} className="flex items-center xl:items-start gap-8 flex-col max-w-2xl">
         {/* Enterprise Eyebrow Badge */}
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-violet-500/30 bg-violet-500/10 text-xs font-semibold uppercase tracking-wider text-violet-300 shadow-sm backdrop-blur">
           <span className="h-2 w-2 rounded-full bg-violet-400 animate-pulse" />
@@ -56,10 +57,10 @@ const MainBanner = () => {
             </button>
           </Link>
         </div>
-      </div>
+      </ScrollReveal>
 
       {/* Hero Visual — Metallic Logo Showcase Card */}
-      <div className="relative w-full max-w-[460px] xl:max-w-[500px] flex items-center justify-center">
+      <ScrollReveal delay={180} className="relative w-full max-w-[460px] xl:max-w-[500px] flex items-center justify-center">
         {/* Outer ambient glow */}
         <div className="absolute inset-0 bg-gradient-to-br from-violet-600/20 via-blue-600/15 to-transparent rounded-3xl blur-2xl -z-10" />
 
@@ -84,7 +85,7 @@ const MainBanner = () => {
             </span>
           </div>
         </div>
-      </div>
+      </ScrollReveal>
     </section>
   );
 };

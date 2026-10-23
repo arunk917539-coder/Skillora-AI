@@ -10,7 +10,7 @@ const baseTabItems = [
 
 const TabBar = ({ isHr }: { isHr?: boolean }) => {
   const tabItems = isHr
-    ? [...baseTabItems, { value: "Manage Scenarios", key: "hr_questions" }]
+    ? [...baseTabItems, { value: "Manage Questions", key: "hr_questions" }]
     : baseTabItems;
 
   return (

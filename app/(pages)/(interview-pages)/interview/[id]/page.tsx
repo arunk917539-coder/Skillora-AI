@@ -9,5 +9,12 @@ export default async function AssessmentPage({ params }: { params: Promise<{ id:
   const { id } = await params;
   const assessment = await prisma.interview.findFirst({ where: { id, userId: session.user.id }, include: { feedBack: true } });
   if (!assessment) redirect("/dashboard");
-  return <InterviewContent assessment={JSON.parse(JSON.stringify(assessment))} />;
+
+  const safeAssessment = JSON.parse(JSON.stringify(assessment));
+  // Security guardrail: Do not expose reference/expected answers to candidates before completion
+  if (!safeAssessment.isCompleted) {
+    safeAssessment.expectedAnswers = [];
+  }
+
+  return <InterviewContent assessment={safeAssessment} />;
 }

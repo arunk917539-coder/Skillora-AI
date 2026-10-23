@@ -1,5 +1,6 @@
 import React from "react";
 import { MessageSquare, ShieldCheck, Zap, BarChart2, Compass, Award } from "lucide-react";
+import { ScrollReveal } from "../ui/scroll-reveal";
 
 const containerItems = [
   {
@@ -49,7 +50,7 @@ const containerItems = [
 const ShowCaseBanner1 = () => {
   return (
     <article id="features" className="pt-10 pb-16 scroll-mt-24">
-      <section className="flex flex-col md:flex-row justify-between gap-6 pb-12 items-start md:items-end">
+      <ScrollReveal delay={40} className="flex flex-col md:flex-row justify-between gap-6 pb-12 items-start md:items-end">
         <div className="space-y-3 max-w-xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-violet-500/30 bg-violet-500/10 text-xs font-semibold uppercase tracking-wider text-violet-300">
             Competency Framework
@@ -61,14 +62,15 @@ const ShowCaseBanner1 = () => {
         <p className="max-w-md text-sm sm:text-base text-slate-400 leading-relaxed">
           Develop executive judgement through realistic workplace scenarios, transparent scoring, explainable AI feedback, and deliberate practice.
         </p>
-      </section>
+      </ScrollReveal>
 
       <section className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {containerItems.map((item, index) => {
           const IconComponent = item.icon;
           return (
-            <div
+            <ScrollReveal
               key={index}
+              delay={index * 60}
               className="group relative rounded-2xl border border-white/10 bg-slate-900/60 p-7 backdrop-blur-md shadow-lg transition-all duration-300 hover:border-violet-500/40 hover:bg-slate-900/90 hover:-translate-y-1"
             >
               <div className="flex items-center justify-between mb-5">
@@ -85,7 +87,7 @@ const ShowCaseBanner1 = () => {
               <p className="text-sm text-slate-400 leading-relaxed">
                 {item.content}
               </p>
-            </div>
+            </ScrollReveal>
           );
         })}
       </section>

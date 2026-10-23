@@ -11,9 +11,10 @@ import {
   parseHrScenarioCriteria,
   serializeHrScenarioCriteria,
   type HrScenarioCriteria,
+  type QuestionStatus,
 } from "./hr-criteria";
 
-export { parseHrScenarioCriteria, serializeHrScenarioCriteria, type HrScenarioCriteria };
+export { parseHrScenarioCriteria, serializeHrScenarioCriteria, type HrScenarioCriteria, type QuestionStatus };
 
 const VALID_COMPETENCIES: CompetencyKey[] = [
   "communication",
@@ -38,6 +39,7 @@ const hrQuestionSchema = z.object({
   question: z.string().trim().min(10, "Question prompt must be at least 10 characters.").max(1000, "Question prompt cannot exceed 1000 characters."),
   expectedAnswer: z.string().trim().min(10, "Expected answer must be at least 10 characters.").max(5000, "Expected answer cannot exceed 5000 characters."),
   competencies: z.array(z.enum(["communication", "problemSolving", "collaboration", "accountability", "planning"])).min(1, "Select at least one competency."),
+  status: z.enum(["draft", "published", "archived"]).default("published"),
   contextInstructions: z.string().max(1000).optional(),
   requiredConcepts: z.array(z.string()).default([]),
   acceptableAlternatives: z.array(z.string()).default([]),
@@ -72,7 +74,7 @@ export async function getHrQuestions() {
   });
 }
 
-/** Retrieves custom questions safe for assessment creation (omits expectedAnswer, filters out archived) */
+/** Retrieves custom questions safe for assessment creation (omits expectedAnswer, filters out draft and archived) */
 export async function getAvailableCustomQuestions() {
   try {
     const list = await prisma.hrQuestion.findMany({
@@ -89,7 +91,10 @@ export async function getAvailableCustomQuestions() {
     });
 
     return list
-      .filter((q) => !parseHrScenarioCriteria(q.expectedAnswer).isArchived)
+      .filter((q) => {
+        const criteria = parseHrScenarioCriteria(q.expectedAnswer);
+        return criteria.status === "published" && !criteria.isArchived;
+      })
       .map(({ expectedAnswer: _ignored, ...rest }) => rest);
   } catch (error) {
     console.error("Failed to fetch custom HR questions", error);
@@ -121,6 +126,7 @@ export async function createHrQuestionAction(
     question: formData.get("question"),
     expectedAnswer: formData.get("expectedAnswer"),
     competencies,
+    status: formData.get("status") || "published",
     contextInstructions: formData.get("contextInstructions") || undefined,
     requiredConcepts: parseDelimitedList(formData.get("requiredConcepts")),
     acceptableAlternatives: parseDelimitedList(formData.get("acceptableAlternatives")),
@@ -139,6 +145,7 @@ export async function createHrQuestionAction(
   }
 
   try {
+    const isArchived = parseResult.data.status === "archived";
     const criteriaEnvelope = serializeHrScenarioCriteria({
       version: 1,
       expectedAnswer: parseResult.data.expectedAnswer,
@@ -147,7 +154,9 @@ export async function createHrQuestionAction(
       acceptableAlternatives: parseResult.data.acceptableAlternatives,
       criticalErrors: parseResult.data.criticalErrors,
       scoringGuidance: parseResult.data.scoringGuidance,
-      isArchived: false,
+      isArchived,
+      status: parseResult.data.status,
+      competencies: parseResult.data.competencies,
     });
 
     const created = await prisma.hrQuestion.create({
@@ -214,6 +223,12 @@ export async function updateHrQuestionAction(
     ? rawCompetencies.map(String)
     : [String(formData.get("competency") || "")].filter(Boolean);
 
+  const prevCriteria = parseHrScenarioCriteria(existing.expectedAnswer);
+  const statusInput = formData.get("status");
+  const resolvedStatus = statusInput
+    ? String(statusInput)
+    : prevCriteria.status || "published";
+
   const parseResult = hrQuestionSchema.safeParse({
     title: formData.get("title"),
     category: formData.get("category"),
@@ -221,6 +236,7 @@ export async function updateHrQuestionAction(
     question: formData.get("question"),
     expectedAnswer: formData.get("expectedAnswer"),
     competencies,
+    status: resolvedStatus,
     contextInstructions: formData.get("contextInstructions") || undefined,
     requiredConcepts: parseDelimitedList(formData.get("requiredConcepts")),
     acceptableAlternatives: parseDelimitedList(formData.get("acceptableAlternatives")),
@@ -239,7 +255,7 @@ export async function updateHrQuestionAction(
   }
 
   try {
-    const prevCriteria = parseHrScenarioCriteria(existing.expectedAnswer);
+    const isArchived = parseResult.data.status === "archived";
     const updatedEnvelope = serializeHrScenarioCriteria({
       version: (prevCriteria.version || 1) + 1,
       expectedAnswer: parseResult.data.expectedAnswer,
@@ -248,7 +264,9 @@ export async function updateHrQuestionAction(
       acceptableAlternatives: parseResult.data.acceptableAlternatives,
       criticalErrors: parseResult.data.criticalErrors,
       scoringGuidance: parseResult.data.scoringGuidance,
-      isArchived: prevCriteria.isArchived,
+      isArchived: isArchived,
+      status: parseResult.data.status,
+      competencies: parseResult.data.competencies,
     });
 
     await prisma.hrQuestion.update({
@@ -278,8 +296,113 @@ export async function updateHrQuestionAction(
   }
 }
 
+/** Server action to publish a question (makes it available for new assignments) */
+export async function publishHrQuestionAction(id: string): Promise<{ success: boolean; error?: string }> {
+  const session = await auth();
+  const userId = session?.user?.id;
+  const isHr = await isAuthorizedHr(userId, session?.user?.email);
+  if (!userId || !isHr) {
+    return { success: false, error: "Unauthorized: HR access required." };
+  }
+
+  if (!id || typeof id !== "string") {
+    return { success: false, error: "Question ID is required." };
+  }
+
+  const existing = await prisma.hrQuestion.findUnique({
+    where: { id },
+    select: { id: true, userId: true, expectedAnswer: true },
+  });
+
+  if (!existing) {
+    return { success: false, error: "Question not found." };
+  }
+
+  if (existing.userId !== userId) {
+    return { success: false, error: "Unauthorized: You do not have permission to publish this question." };
+  }
+
+  try {
+    const criteria = parseHrScenarioCriteria(existing.expectedAnswer);
+    const updatedEnvelope = serializeHrScenarioCriteria({
+      ...criteria,
+      status: "published",
+      isArchived: false,
+    });
+
+    await prisma.hrQuestion.update({
+      where: { id },
+      data: { expectedAnswer: updatedEnvelope },
+    });
+
+    revalidatePath("/dashboard");
+    logSecurityEvent({
+      timestamp: new Date().toISOString(),
+      action: "HR_SCENARIO_PUBLISHED",
+      actorUserId: userId,
+      targetId: id,
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to publish HR question", error);
+    return { success: false, error: "Database error: Could not publish question." };
+  }
+}
+
+/** Server action to unpublish a question (sets status back to draft) */
+export async function unpublishHrQuestionAction(id: string): Promise<{ success: boolean; error?: string }> {
+  const session = await auth();
+  const userId = session?.user?.id;
+  const isHr = await isAuthorizedHr(userId, session?.user?.email);
+  if (!userId || !isHr) {
+    return { success: false, error: "Unauthorized: HR access required." };
+  }
+
+  if (!id || typeof id !== "string") {
+    return { success: false, error: "Question ID is required." };
+  }
+
+  const existing = await prisma.hrQuestion.findUnique({
+    where: { id },
+    select: { id: true, userId: true, expectedAnswer: true },
+  });
+
+  if (!existing) {
+    return { success: false, error: "Question not found." };
+  }
+
+  if (existing.userId !== userId) {
+    return { success: false, error: "Unauthorized: You do not have permission to unpublish this question." };
+  }
+
+  try {
+    const criteria = parseHrScenarioCriteria(existing.expectedAnswer);
+    const updatedEnvelope = serializeHrScenarioCriteria({
+      ...criteria,
+      status: "draft",
+    });
+
+    await prisma.hrQuestion.update({
+      where: { id },
+      data: { expectedAnswer: updatedEnvelope },
+    });
+
+    revalidatePath("/dashboard");
+    logSecurityEvent({
+      timestamp: new Date().toISOString(),
+      action: "HR_SCENARIO_UNPUBLISHED",
+      actorUserId: userId,
+      targetId: id,
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to unpublish HR question", error);
+    return { success: false, error: "Database error: Could not unpublish question." };
+  }
+}
+
 /** Server action to archive/unarchive an HR-managed scenario question */
-export async function archiveHrQuestionAction(id: string): Promise<{ success: boolean; isArchived?: boolean; error?: string }> {
+export async function archiveHrQuestionAction(id: string): Promise<{ success: boolean; isArchived?: boolean; status?: QuestionStatus; error?: string }> {
   const session = await auth();
   const userId = session?.user?.id;
   const isHr = await isAuthorizedHr(userId, session?.user?.email);
@@ -307,9 +430,11 @@ export async function archiveHrQuestionAction(id: string): Promise<{ success: bo
   try {
     const criteria = parseHrScenarioCriteria(existing.expectedAnswer);
     const newArchivedState = !criteria.isArchived;
+    const newStatus: QuestionStatus = newArchivedState ? "archived" : "published";
     const updatedEnvelope = serializeHrScenarioCriteria({
       ...criteria,
       isArchived: newArchivedState,
+      status: newStatus,
     });
 
     await prisma.hrQuestion.update({
@@ -324,7 +449,7 @@ export async function archiveHrQuestionAction(id: string): Promise<{ success: bo
       actorUserId: userId,
       targetId: id,
     });
-    return { success: true, isArchived: newArchivedState };
+    return { success: true, isArchived: newArchivedState, status: newStatus };
   } catch (error) {
     console.error("Failed to archive HR question", error);
     return { success: false, error: "Database error: Could not update archive status." };

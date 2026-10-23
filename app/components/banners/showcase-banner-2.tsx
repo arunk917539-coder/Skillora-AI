@@ -1,10 +1,11 @@
 import React from "react";
 import Image from "next/image";
 import { CheckCircle2, Lock, RefreshCw } from "lucide-react";
+import { ScrollReveal } from "../ui/scroll-reveal";
 
 const ShowcaseBanner2 = () => {
   return (
-    <article className="relative my-12 rounded-3xl border border-white/10 bg-gradient-to-r from-slate-900/90 via-slate-900/75 to-violet-950/30 p-8 sm:p-12 backdrop-blur-xl shadow-2xl overflow-hidden">
+    <ScrollReveal delay={40} as="article" className="relative my-12 rounded-3xl border border-white/10 bg-gradient-to-r from-slate-900/90 via-slate-900/75 to-violet-950/30 p-8 sm:p-12 backdrop-blur-xl shadow-2xl overflow-hidden">
       {/* Decorative ambient radial glow */}
       <div className="pointer-events-none absolute -right-20 -bottom-20 h-64 w-64 rounded-full bg-violet-600/15 blur-[80px]" />
 
@@ -48,7 +49,7 @@ const ShowcaseBanner2 = () => {
           />
         </div>
       </div>
-    </article>
+    </ScrollReveal>
   );
 };
 

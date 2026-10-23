@@ -9,22 +9,40 @@ export async function evaluateWorkplaceAnswer(
   answer: string,
   expectedAnswerFallback?: string
 ): Promise<SemanticAnswerEvaluation> {
-  let scenario: WorkplaceScenario | undefined = scenarioForQuestion(question);
+  let scenario: WorkplaceScenario | undefined;
+
+  // Check if expectedAnswerFallback contains an HR question criteria envelope
+  const isHrEnvelope = expectedAnswerFallback && expectedAnswerFallback.trim().startsWith("{");
+  if (!isHrEnvelope) {
+    scenario = scenarioForQuestion(question);
+  }
 
   if (!scenario && expectedAnswerFallback) {
     const criteria = parseHrScenarioCriteria(expectedAnswerFallback);
-    const defaultCompetencies: CompetencyKey[] = ["communication", "problemSolving", "accountability"];
+    if (!criteria.expectedAnswer || !criteria.expectedAnswer.trim()) {
+      throw new Error("Authoritative reference answer is missing for this question. Evaluation cannot proceed without a valid rubric reference.");
+    }
+
+    const validCompetencyKeys: CompetencyKey[] = ["communication", "problemSolving", "collaboration", "accountability", "planning"];
+    const targetCompetencies = criteria.competencies
+      ? (criteria.competencies.filter((c) => validCompetencyKeys.includes(c as CompetencyKey)) as CompetencyKey[])
+      : [];
+
+    const resolvedCompetencies: CompetencyKey[] = targetCompetencies.length > 0
+      ? targetCompetencies
+      : ["communication", "problemSolving", "accountability"];
+
     const promptText = criteria.contextInstructions
       ? `${question}\n\nContext & Instructions: ${criteria.contextInstructions}`
       : question;
 
     scenario = {
       id: "custom-hr-scenario",
-      category: "HR Custom Scenario",
+      category: "HR Questions",
       difficulty: "Medium",
       prompt: promptText,
-      competencies: defaultCompetencies,
-      rubric: rubricFor(defaultCompetencies),
+      competencies: resolvedCompetencies,
+      rubric: rubricFor(resolvedCompetencies),
       exampleStrongResponse: criteria.expectedAnswer,
       requiredConcepts: criteria.requiredConcepts,
       acceptableAlternatives: criteria.acceptableAlternatives,

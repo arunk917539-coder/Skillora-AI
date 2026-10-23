@@ -8,6 +8,7 @@ import {
   AccordionTrigger,
 } from "../ui/accordion";
 import { HelpCircle } from "lucide-react";
+import { ScrollReveal } from "../ui/scroll-reveal";
 
 const workplaceTips = [
   {
@@ -45,7 +46,7 @@ const workplaceTips = [
 const ShowcaseBanner3 = () => {
   return (
     <article className="pt-8 pb-16">
-      <section className="flex flex-col md:flex-row justify-between gap-6 pb-10 items-start md:items-end">
+      <ScrollReveal delay={40} className="flex flex-col md:flex-row justify-between gap-6 pb-10 items-start md:items-end">
         <div className="space-y-3 max-w-xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-violet-500/30 bg-violet-500/10 text-xs font-semibold uppercase tracking-wider text-violet-300">
             <HelpCircle className="h-3.5 w-3.5" />
@@ -58,31 +59,36 @@ const ShowcaseBanner3 = () => {
         <p className="max-w-md text-sm sm:text-base text-slate-400 leading-relaxed">
           Practise workplace decisions, understand rubric signals, and use tailored development recommendations to continuously elevate your professional impact.
         </p>
-      </section>
+      </ScrollReveal>
 
       <section className="w-full">
         <Accordion type="single" className="flex flex-col gap-4" collapsible>
           {workplaceTips.map((item, index) => {
             return (
-              <AccordionItem
+              <ScrollReveal
                 key={index}
-                value={`item-${index}`}
-                className="rounded-2xl border border-white/10 bg-slate-900/60 backdrop-blur-md overflow-hidden transition-all duration-300 data-[state=open]:border-violet-500/40 data-[state=open]:bg-slate-900/90"
+                delay={index * 50}
+                className="w-full"
               >
-                <AccordionTrigger className="w-full px-6 py-5 hover:no-underline text-left group">
-                  <div className="flex items-center gap-4 text-left">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-slate-800/80 font-mono text-sm font-bold text-violet-400 group-hover:border-violet-500/30 group-hover:text-violet-300 transition-colors">
-                      {item.num}
-                    </span>
-                    <span className="text-base sm:text-lg font-semibold text-white tracking-tight group-hover:text-violet-200 transition-colors">
-                      {item.head}
-                    </span>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-6 pb-6 pt-1 text-sm sm:text-base text-slate-300 leading-relaxed pl-20">
-                  {item.subhead}
-                </AccordionContent>
-              </AccordionItem>
+                <AccordionItem
+                  value={`item-${index}`}
+                  className="rounded-2xl border border-white/10 bg-slate-900/60 backdrop-blur-md overflow-hidden transition-all duration-300 data-[state=open]:border-violet-500/40 data-[state=open]:bg-slate-900/90"
+                >
+                  <AccordionTrigger className="w-full px-6 py-5 hover:no-underline text-left group">
+                    <div className="flex items-center gap-4 text-left">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-slate-800/80 font-mono text-sm font-bold text-violet-400 group-hover:border-violet-500/30 group-hover:text-violet-300 transition-colors">
+                        {item.num}
+                      </span>
+                      <span className="text-base sm:text-lg font-semibold text-white tracking-tight group-hover:text-violet-200 transition-colors">
+                        {item.head}
+                      </span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-6 pb-6 pt-1 text-sm sm:text-base text-slate-300 leading-relaxed pl-20">
+                    {item.subhead}
+                  </AccordionContent>
+                </AccordionItem>
+              </ScrollReveal>
             );
           })}
         </Accordion>

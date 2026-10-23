@@ -4,8 +4,9 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { SCENARIOS, CATEGORIES, selectScenarios } = require("../../.test-build/scenarios.js");
 const { isSemanticEvaluation, normalizeEvaluationPayload, getEvaluationValidationError } = require("../../.test-build/evaluator-types.js");
-const { evaluateWithOllama, extractJsonContent, normalizeForEvidenceCheck } = require("../../.test-build/ollama-evaluator.js");
+const { evaluateWithOllama, extractJsonContent, normalizeForEvidenceCheck, buildEvaluationMessages, isNonResponsiveAnswer, detectEvaluationContradiction } = require("../../.test-build/ollama-evaluator.js");
 const { evaluateWorkplaceAnswer } = require("../../.test-build/evaluation-service.js");
+const { parseHrScenarioCriteria, serializeHrScenarioCriteria } = require("../../.test-build/hr-criteria.js");
 const { scoreAnswer, averageScores, RUBRIC_VERSION } = require("../../.test-build/scoring.js");
 const { buildDevelopmentPlan } = require("../../.test-build/development-plans.js");
 const { compareProgress } = require("../../.test-build/progress.js");
@@ -44,7 +45,7 @@ test("scenario selection prefers requested difficulty", () => {
 
 test("invalid scenario count is clamped safely by selector", () => {
   assert.equal(selectScenarios("Communication", 0).length, 1);
-  assert.equal(selectScenarios("Communication", 100).length, 3);
+  assert.equal(selectScenarios("Communication", 100).length, 5);
 });
 
 test("scoring returns bounded scores and evidence", () => {
@@ -360,4 +361,238 @@ test("evaluateWithOllama strictly throws after bounded retry if schema remains i
     global.fetch = originalFetch;
   }
 });
+
+test("scenario selection supports up to 5 scenarios across categories without duplicates", () => {
+  for (const category of CATEGORIES) {
+    const rows = selectScenarios(category, 5);
+    assert.equal(rows.length, 5);
+    assert.equal(new Set(rows.map((r) => r.id)).size, 5);
+    assert.ok(rows.every((r) => r.category === category));
+  }
+});
+
+test("HR scenario criteria parser correctly envelopes rich criteria with versioning and archive state", () => {
+  const criteria = {
+    version: 2,
+    expectedAnswer: "Align stakeholders, establish timeline, and communicate early.",
+    contextInstructions: "Tight budget constraint.",
+    requiredConcepts: ["stakeholder alignment", "early communication"],
+    acceptableAlternatives: ["phased release"],
+    criticalErrors: ["concealing the delay"],
+    scoringGuidance: "Award high score only if early communication is explicitly mentioned.",
+    isArchived: true,
+  };
+
+  const serialized = serializeHrScenarioCriteria(criteria);
+  const parsed = parseHrScenarioCriteria(serialized);
+
+  assert.equal(parsed.version, 2);
+  assert.equal(parsed.expectedAnswer, criteria.expectedAnswer);
+  assert.equal(parsed.contextInstructions, "Tight budget constraint.");
+  assert.deepEqual(parsed.requiredConcepts, ["stakeholder alignment", "early communication"]);
+  assert.deepEqual(parsed.acceptableAlternatives, ["phased release"]);
+  assert.deepEqual(parsed.criticalErrors, ["concealing the delay"]);
+  assert.equal(parsed.scoringGuidance, criteria.scoringGuidance);
+  assert.equal(parsed.isArchived, true);
+});
+
+test("HR criteria parser gracefully handles plain text legacy answers", () => {
+  const plainText = "Standard legacy answer string.";
+  const parsed = parseHrScenarioCriteria(plainText);
+  assert.equal(parsed.version, 1);
+  assert.equal(parsed.expectedAnswer, plainText);
+  assert.equal(parsed.isArchived, false);
+  assert.deepEqual(parsed.requiredConcepts, []);
+  assert.deepEqual(parsed.criticalErrors, []);
+});
+
+test("scoring heavily penalizes hostile or toxic responses", () => {
+  const toxicAnswer = "I will never listen to the team because they are stupid and I will fire them all.";
+  const result = scoreAnswer(toxicAnswer);
+  assert.ok(result.score <= 15, `Expected score <= 15 for toxic answer, got ${result.score}`);
+  assert.ok(result.evidence[0].includes("hostile, dismissive, or counter-productive"));
+});
+
+test("buildEvaluationMessages includes reference answer, required concepts, and critical errors in prompt", () => {
+  const scenario = SCENARIOS.find((item) => item.id === "comm-med-1");
+  assert.ok(scenario, "Scenario comm-med-1 must exist");
+
+  const messages = buildEvaluationMessages(scenario, "I would communicate the delay early.");
+  assert.equal(messages.length, 2);
+
+  const systemMsg = messages[0].content;
+  const userMsg = messages[1].content;
+
+  assert.ok(systemMsg.includes("SEMANTIC ACCURACY OVER LENGTH"));
+  assert.ok(systemMsg.includes("CRITICAL ERRORS"));
+  assert.ok(userMsg.includes("Authoritative Reference Answer"));
+  assert.ok(userMsg.includes(scenario.exampleStrongResponse));
+  assert.ok(userMsg.includes("Required Essential Concepts"));
+  assert.ok(userMsg.includes("Critical Errors / Unsafe Actions"));
+});
+
+test("isNonResponsiveAnswer identifies non-responsive and evasive filler answers", () => {
+  assert.equal(isNonResponsiveAnswer("all is well"), true);
+  assert.equal(isNonResponsiveAnswer("all is well."), true);
+  assert.equal(isNonResponsiveAnswer("ok"), true);
+  assert.equal(isNonResponsiveAnswer("OK!"), true);
+  assert.equal(isNonResponsiveAnswer("I don't know"), true);
+  assert.equal(isNonResponsiveAnswer("i dont know."), true);
+  assert.equal(isNonResponsiveAnswer("idk"), true);
+  assert.equal(isNonResponsiveAnswer("none"), true);
+  assert.equal(isNonResponsiveAnswer("test"), true);
+
+  // Substantive answers must not be flagged as non-responsive
+  assert.equal(isNonResponsiveAnswer("I would immediately notify finance in writing and return the extra payment."), false);
+  assert.equal(isNonResponsiveAnswer("I would thank the client and ask clarifying questions on scope."), false);
+});
+
+test("detectEvaluationContradiction flags high scores for non-responsive answers or zero evidence", () => {
+  const contradictory = {
+    score: 80,
+    competencies: { communication: 80 },
+    criterionEvaluations: [
+      {
+        competency: "communication",
+        score: 80,
+        evidence: [],
+        missingEvidence: ["Acknowledge timeline empathetically"],
+        rationale: "Candidate failed to address client expectations."
+      }
+    ]
+  };
+
+  const reasonNonResp = detectEvaluationContradiction(contradictory, "all is well");
+  assert.ok(reasonNonResp && reasonNonResp.includes("non-responsive"), "Must flag non-responsive answer with score 80");
+
+  const reasonZeroEvidence = detectEvaluationContradiction(contradictory, "A lengthy answer that nonetheless provides zero evidence.");
+  assert.ok(reasonZeroEvidence && reasonZeroEvidence.includes("no demonstrated positive evidence"), "Must flag zero evidence with score 80");
+
+  // Consistent evaluation must not be flagged
+  const consistent = {
+    score: 10,
+    competencies: { communication: 10 },
+    criterionEvaluations: [
+      {
+        competency: "communication",
+        score: 10,
+        evidence: [],
+        missingEvidence: ["Everything"],
+        rationale: "No relevant communication demonstrated."
+      }
+    ]
+  };
+  assert.equal(detectEvaluationContradiction(consistent, "all is well"), null);
+});
+
+test("evaluateWithOllama penalizes non-responsive answers like 'all is well' to <= 15", async () => {
+  const scenario = SCENARIOS.find((item) => item.id === "comm-easy-3");
+  const answer = "all is well";
+
+  // Simulate an LLM that attempts to award 80 to "all is well"
+  const flawedPayload = {
+    score: 80,
+    competencies: { communication: 80, problemSolving: 80 },
+    evidence: ["all is well"],
+    strengths: ["Short response"],
+    improvements: ["Clarify requirements"],
+    criterionEvaluations: [
+      { competency: "communication", score: 80, evidence: ["all is well"], missingEvidence: ["Clarifying questions"], rationale: "Too vague" },
+      { competency: "problemSolving", score: 80, evidence: ["all is well"], missingEvidence: ["Propose MVP"], rationale: "No problem solving" }
+    ]
+  };
+
+  const originalFetch = global.fetch;
+  let callCount = 0;
+  global.fetch = async () => {
+    callCount++;
+    return new Response(JSON.stringify({ message: { content: JSON.stringify(flawedPayload) } }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  };
+
+  try {
+    const result = await evaluateWithOllama(scenario, answer);
+    assert.ok(result.score <= 15, `Expected overall score <= 15 for 'all is well', got ${result.score}`);
+    assert.ok(result.competencies.communication <= 15, `Expected communication <= 15, got ${result.competencies.communication}`);
+    assert.ok(result.competencies.problemSolving <= 15, `Expected problemSolving <= 15, got ${result.competencies.problemSolving}`);
+    assert.equal(result.evidence.length, 0, "Non-responsive answers must have 0 evidence");
+    assert.equal(result.strengths.length, 0, "Non-responsive answers must have 0 strengths");
+    assert.equal(result.meetsSubstantiveIntent, false);
+    assert.equal(result.reviewRequired, true);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("evaluateWithOllama awards appropriate high credit to short but genuinely correct answers", async () => {
+  const scenario = SCENARIOS.find((item) => item.id === "ethic-easy-1");
+  const answer = "I would immediately notify finance in writing and return the extra payment.";
+
+  const strongPayload = {
+    score: 90,
+    competencies: { accountability: 90 },
+    evidence: ["notify finance in writing", "return the extra payment"],
+    strengths: ["Immediate transparent notification", "Refuses unearned funds"],
+    improvements: ["Keep a personal copy of transaction log"],
+    criterionEvaluations: [
+      {
+        competency: "accountability",
+        score: 90,
+        evidence: ["notify finance in writing", "return the extra payment"],
+        missingEvidence: [],
+        rationale: "Exemplary personal accountability and proactive ethical remediation."
+      }
+    ]
+  };
+
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response(JSON.stringify({ message: { content: JSON.stringify(strongPayload) } }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" }
+  });
+
+  try {
+    const result = await evaluateWithOllama(scenario, answer);
+    assert.ok(result.score >= 85, `Expected score >= 85 for correct response, got ${result.score}`);
+    assert.ok(result.competencies.accountability >= 85);
+    assert.ok(result.evidence.length >= 1);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("evaluateWithOllama handles partial responses with proportionate partial credit", async () => {
+  const scenario = SCENARIOS.find((item) => item.id === "comm-easy-3");
+  const answer = "I would ask the client for clarification on their requirements.";
+
+  const partialPayload = {
+    score: 45,
+    competencies: { communication: 50, problemSolving: 40 },
+    evidence: ["ask the client for clarification"],
+    strengths: ["Asks clarifying questions"],
+    improvements: ["Acknowledge tight timeline", "Propose rapid discovery call or MVP"],
+    criterionEvaluations: [
+      { competency: "communication", score: 50, evidence: ["ask the client for clarification"], missingEvidence: ["Acknowledge timeline"], rationale: "Clarifies requirements but misses empathy." },
+      { competency: "problemSolving", score: 40, evidence: [], missingEvidence: ["Propose MVP"], rationale: "Lacks concrete delivery trade-offs." }
+    ]
+  };
+
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response(JSON.stringify({ message: { content: JSON.stringify(partialPayload) } }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" }
+  });
+
+  try {
+    const result = await evaluateWithOllama(scenario, answer);
+    assert.ok(result.score >= 35 && result.score <= 55, `Expected score between 35 and 55, got ${result.score}`);
+    assert.ok(result.evidence.includes("ask the client for clarification"));
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+
 

@@ -19,7 +19,7 @@ export type RubricCriterion = {
 
 export type WorkplaceScenario = {
   id: string;
-  category: CategoryType;
+  category: CategoryType | "HR Custom Scenario";
   difficulty: DifficultyType;
   prompt: string;
   competencies: CompetencyKey[];

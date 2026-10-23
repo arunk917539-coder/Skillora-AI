@@ -42,77 +42,77 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  --color-green: #b9ff66;
-  --color-gray: #f3f3f3;
-  --color-dark: #191a23;
+  --color-green: #10b981;
+  --color-gray: #0f172a;
+  --color-dark: #07090e;
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-  --chart-1: 231 30% 24%;
-  --chart-2: 232 14% 41%;
-  --chart-3: 220 20% 50%;
-  --chart-4: 229 14% 60%;
-  --chart-5: 231 58% 95%;
+  --radius: 0.75rem;
+  --background: #0b0f19;
+  --foreground: #f8fafc;
+  --card: #111827;
+  --card-foreground: #f8fafc;
+  --popover: #0f172a;
+  --popover-foreground: #f8fafc;
+  --primary: #8b5cf6;
+  --primary-foreground: #ffffff;
+  --secondary: #1e293b;
+  --secondary-foreground: #f1f5f9;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #1e293b;
+  --accent-foreground: #f8fafc;
+  --destructive: #ef4444;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #8b5cf6;
+  --sidebar: #0f172a;
+  --sidebar-foreground: #f8fafc;
+  --sidebar-primary: #8b5cf6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1e293b;
+  --sidebar-accent-foreground: #f8fafc;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-ring: #8b5cf6;
+  --chart-1: #38bdf8;
+  --chart-2: #818cf8;
+  --chart-3: #10b981;
+  --chart-4: #f59e0b;
+  --chart-5: #a855f7;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: #b9ff66;
-  --chart-2: #5a5f7a;
-  --chart-3: #b9ff66;
-  --chart-4: #b9ff66;
-  --chart-5: #b9ff66;
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #0b0f19;
+  --foreground: #f8fafc;
+  --card: #111827;
+  --card-foreground: #f8fafc;
+  --popover: #0f172a;
+  --popover-foreground: #f8fafc;
+  --primary: #8b5cf6;
+  --primary-foreground: #ffffff;
+  --secondary: #1e293b;
+  --secondary-foreground: #f1f5f9;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #1e293b;
+  --accent-foreground: #f8fafc;
+  --destructive: #ef4444;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #8b5cf6;
+  --chart-1: #38bdf8;
+  --chart-2: #818cf8;
+  --chart-3: #10b981;
+  --chart-4: #f59e0b;
+  --chart-5: #a855f7;
+  --sidebar-foreground: #f8fafc;
+  --sidebar-primary: #8b5cf6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1e293b;
+  --sidebar-accent-foreground: #f8fafc;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-ring: #8b5cf6;
 }
 
 @layer base {
@@ -120,61 +120,38 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    color-scheme: dark;
   }
 }
 
 @layer components {
   .btn-select {
-    @apply bg-blue-200 text-black px-4 py-2 rounded;
+    @apply bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-medium px-4 py-2 rounded shadow-md shadow-violet-500/20;
   }
 
   .btn-deselect {
-    @apply bg-white text-black px-4 py-2 rounded border;
+    @apply bg-slate-900/60 text-slate-400 hover:text-white px-4 py-2 rounded border border-white/10;
   }
 
   .nav-btn {
-    @apply rounded-full border border-transparent hover:border-black hover:font-semibold text-[16px] leading-6 px-1 md:px-2.5 py-2.5;
+    @apply rounded-full border border-white/10 hover:border-violet-500/40 hover:bg-white/5 hover:text-white text-slate-300 text-[15px] font-medium leading-6 px-3 py-1.5 transition-all duration-200 cursor-pointer;
   }
 
   .blue-head {
-    @apply bg-blue-200 px-2 py-3 rounded-xl;
+    @apply bg-gradient-to-r from-violet-500/15 to-blue-500/15 border border-violet-500/30 text-violet-300 px-3.5 py-1.5 rounded-xl;
   }
 }
 
 .primary-button {
-  @apply bg-[#CAC5FE] z-50 text-black font-semibold rounded-full hover:opacity-80 px-6 py-2 hover:bg-[#CAC5FE] text-[14px];
+  @apply bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold rounded-full hover:brightness-110 px-6 py-2 shadow-lg shadow-violet-500/25 text-[14px] transition-all;
 }
 
-@keyframes ripple1 {
-  0% {
-    transform: scale(1);
-    opacity: 0.7;
-  }
-  100% {
-    transform: scale(4);
-    opacity: 0;
-  }
-}
-
-@keyframes ripple2 {
-  0% {
-    transform: scale(1);
-    opacity: 0.5;
-  }
-  100% {
-    transform: scale(3);
-    opacity: 0;
-  }
-}
-
-.animate-ripple1 {
-  animation: ripple1 2s infinite ease-out;
-}
-
-.animate-ripple2 {
-  animation: ripple2 2s infinite ease-out;
-  animation-delay: 0.5s;
+.gradient {
+  background: radial-gradient(circle at 50% 0%, #151d30 0%, #0b0f19 55%, #07090e 100%);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-attachment: fixed;
 }
 
 .embla {
@@ -188,14 +165,6 @@
   width: fit-content;
 }
 
-.gradient {
-  background: linear-gradient(135deg, #e8e9ea, #e7e9fb);
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-attachment: fixed;
-}
-
-
 .common-loader {
   height: 15px;
   aspect-ratio: 6;
@@ -208,7 +177,7 @@
   padding-left: calc(100% / 6);
   background: radial-gradient(
       closest-side at calc(100% / 3) 50%,
-      #000 90%,
+      #8b5cf6 90%,
       #0000
     )
     0/75% 100% content-box;

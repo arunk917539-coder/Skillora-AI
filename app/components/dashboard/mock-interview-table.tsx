@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import {
@@ -12,7 +12,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowDown, ArrowUp, ArrowUpDown, ClipboardList, RefreshCw } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ClipboardList, RefreshCw, ArrowRight } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -37,12 +37,6 @@ export type MockInterviewType = {
   difficultyLevel: string;
 };
 
-export const difficultyLevelLevels: Record<string, string> = {
-  Easy: "Easy",
-  Medium: "Medium",
-  Hard: "Hard",
-};
-
 export const columns: ColumnDef<MockInterviewType>[] = [
   {
     accessorKey: "id",
@@ -59,22 +53,21 @@ export const columns: ColumnDef<MockInterviewType>[] = [
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(sorted === "asc")}
-          className="flex items-center gap-1"
-          aria-label={`Sort by name ${sorted === "asc" ? "descending" : "ascending"}`}
+          className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-slate-400 hover:text-white p-0 hover:bg-transparent"
         >
-          Name
+          Assessment Title
           {sorted === "asc" ? (
-            <ArrowUp className="h-4 w-4" />
+            <ArrowUp className="h-3.5 w-3.5 text-violet-400" />
           ) : sorted === "desc" ? (
-            <ArrowDown className="h-4 w-4" />
+            <ArrowDown className="h-3.5 w-3.5 text-violet-400" />
           ) : (
-            <ArrowUpDown className="h-4 w-4 opacity-50" />
+            <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />
           )}
         </Button>
       );
     },
-    cell: ({ row }) => <div className="capitalize">{row.getValue("name")}</div>,
-    size: 180,
+    cell: ({ row }) => <div className="font-medium text-white">{row.getValue("name")}</div>,
+    size: 200,
   },
   {
     accessorKey: "createdAt",
@@ -84,16 +77,15 @@ export const columns: ColumnDef<MockInterviewType>[] = [
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(sorted === "asc")}
-          className="flex items-center gap-1"
-          aria-label={`Sort by creation date ${sorted === "asc" ? "descending" : "ascending"}`}
+          className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-slate-400 hover:text-white p-0 hover:bg-transparent"
         >
-          Created Date
+          Date Created
           {sorted === "asc" ? (
-            <ArrowUp className="h-4 w-4" />
+            <ArrowUp className="h-3.5 w-3.5 text-violet-400" />
           ) : sorted === "desc" ? (
-            <ArrowDown className="h-4 w-4" />
+            <ArrowDown className="h-3.5 w-3.5 text-violet-400" />
           ) : (
-            <ArrowUpDown className="h-4 w-4 opacity-50" />
+            <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />
           )}
         </Button>
       );
@@ -103,24 +95,26 @@ export const columns: ColumnDef<MockInterviewType>[] = [
       const value = row.getValue<Date | string>("createdAt");
       const date = new Date(value);
       return (
-        <div>
+        <div className="text-xs text-slate-400 font-mono">
           {Number.isNaN(date.getTime()) ? "—" : date.toLocaleDateString()}
         </div>
       );
     },
-    size: 140,
-  },
-  {
-    accessorKey: "role",
-    header: "Role",
-    cell: ({ row }) => <div className="capitalize">{row.getValue<string>("role")}</div>,
-    size: 140,
+    size: 130,
   },
   {
     accessorKey: "type",
-    header: "Category",
-    cell: ({ row }) => <div className="capitalize">{row.getValue<string>("type")}</div>,
-    size: 140,
+    header: () => (
+      <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+        Competency Area
+      </span>
+    ),
+    cell: ({ row }) => (
+      <span className="text-xs font-medium text-violet-300 bg-violet-950/40 border border-violet-500/20 px-2.5 py-0.5 rounded-full">
+        {row.getValue<string>("type") || "General"}
+      </span>
+    ),
+    size: 150,
   },
   {
     accessorKey: "difficultyLevel",
@@ -130,62 +124,64 @@ export const columns: ColumnDef<MockInterviewType>[] = [
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(sorted === "asc")}
-          className="flex items-center gap-1"
-          aria-label={`Sort by difficulty ${sorted === "asc" ? "descending" : "ascending"}`}
+          className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-slate-400 hover:text-white p-0 hover:bg-transparent"
         >
           Difficulty
           {sorted === "asc" ? (
-            <ArrowUp className="h-4 w-4" />
+            <ArrowUp className="h-3.5 w-3.5 text-violet-400" />
           ) : sorted === "desc" ? (
-            <ArrowDown className="h-4 w-4" />
+            <ArrowDown className="h-3.5 w-3.5 text-violet-400" />
           ) : (
-            <ArrowUpDown className="h-4 w-4 opacity-50" />
+            <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />
           )}
         </Button>
       );
     },
     cell: ({ row }) => {
-      const level = row.getValue<string>("difficultyLevel") || "Unknown";
+      const level = row.getValue<string>("difficultyLevel") || "Medium";
       const color =
         level === "Easy"
-          ? "bg-teal-100 text-teal-800"
+          ? "bg-emerald-950/60 border-emerald-500/30 text-emerald-300"
           : level === "Medium"
-            ? "bg-amber-100 text-amber-800"
-            : level === "Mixed"
-              ? "bg-slate-100 text-slate-700"
-              : level === "Hard"
-                ? "bg-red-100 text-red-800"
-                : "bg-slate-100 text-slate-700";
+          ? "bg-amber-950/60 border-amber-500/30 text-amber-300"
+          : level === "Hard"
+          ? "bg-rose-950/60 border-rose-500/30 text-rose-300"
+          : "bg-slate-800/60 border-white/10 text-slate-300";
 
       return (
-        <span className={`inline-flex rounded-full px-3 py-1 text-sm font-medium ${color}`}>
+        <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${color}`}>
           {level}
         </span>
       );
     },
     enableSorting: true,
-    size: 140,
+    size: 120,
   },
   {
     accessorKey: "isCompleted",
-    header: "Action",
+    header: () => (
+      <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+        Action
+      </span>
+    ),
     enableSorting: false,
     cell: ({ row }) => {
       const status = row.original.isCompleted;
       if (status === true) {
-        return <span className="text-sm text-slate-500">Completed</span>;
+        return <span className="text-xs text-slate-500">Completed</span>;
       }
 
       return (
         <Link
           href={`/interview/${row.original.id}`}
-          className="inline-flex items-center rounded-full bg-[#1d243c] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-black"
+          className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-md shadow-violet-500/20 transition-all hover:brightness-110 active:scale-[0.98]"
         >
-          Continue assessment
+          <span>Continue</span>
+          <ArrowRight className="h-3 w-3" />
         </Link>
       );
     },
-    size: 190,
+    size: 140,
   },
 ];
 
@@ -194,10 +190,7 @@ type InterviewTableProps = {
   query: UseQueryResult<MockInterviewType[], Error>;
 };
 
-export function MockInterviewTable({
-  globalFilterValue,
-  query,
-}: InterviewTableProps) {
+export function MockInterviewTable({ globalFilterValue, query }: InterviewTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [pagination, setPagination] = useState<PaginationState>({
@@ -230,73 +223,72 @@ export function MockInterviewTable({
   const pageCount = table.getPageCount();
 
   return (
-    <div className="flex min-h-[400px] flex-col justify-between space-y-4 rounded-3xl bg-white px-4 py-5 sm:px-8">
+    <div className="flex min-h-[380px] flex-col justify-between space-y-4 rounded-2xl border border-white/5 bg-slate-900/60 p-4 sm:p-6 backdrop-blur-md">
       {query.isLoading ? (
-        <div className="flex min-h-[320px] items-center justify-center">
+        <div className="flex min-h-[300px] items-center justify-center">
           <Loader />
         </div>
       ) : query.isError ? (
-        <div className="flex min-h-[320px] flex-col items-center justify-center gap-4 text-center">
-          <div className="rounded-full bg-red-50 p-4 text-red-600">
-            <RefreshCw className="h-7 w-7" />
+        <div className="flex min-h-[300px] flex-col items-center justify-center gap-3 text-center">
+          <div className="rounded-full bg-rose-950/40 border border-rose-800/40 p-3 text-rose-400">
+            <RefreshCw className="h-6 w-6" />
           </div>
-          <h3 className="text-lg font-semibold text-slate-900">
-            Couldn&apos;t load assessments
-          </h3>
-          <p className="max-w-md text-sm text-slate-600">
+          <h3 className="text-base font-semibold text-white">Couldn&apos;t load assessments</h3>
+          <p className="max-w-md text-xs text-slate-400">
             {query.error?.message || "Something went wrong while loading your assessments."}
           </p>
-          <Button onClick={() => void query.refetch()} disabled={query.isFetching}>
-            {query.isFetching ? "Retrying..." : "Try again"}
+          <Button
+            onClick={() => void query.refetch()}
+            disabled={query.isFetching}
+            variant="outline"
+            className="border-white/10 hover:bg-white/5 text-xs text-white"
+          >
+            {query.isFetching ? "Retrying…" : "Try again"}
           </Button>
         </div>
       ) : data.length === 0 ? (
-        <div className="flex min-h-[320px] flex-col items-center justify-center gap-4 px-4 text-center">
-          <div className="rounded-full bg-indigo-50 p-4 text-indigo-700">
-            <ClipboardList className="h-8 w-8" />
+        <div className="flex min-h-[300px] flex-col items-center justify-center gap-3 px-4 text-center">
+          <div className="rounded-full bg-violet-950/40 border border-violet-500/30 p-3.5 text-violet-400">
+            <ClipboardList className="h-7 w-7" />
           </div>
-          <h3 className="text-xl font-semibold text-slate-900">
-            You&apos;re all caught up
-          </h3>
-          <p className="max-w-md text-sm leading-6 text-slate-600">
-            You have no assessments waiting to be completed. Create a new workplace assessment to continue practising your skills.
+          <h3 className="text-lg font-bold text-white tracking-tight">You&apos;re all caught up</h3>
+          <p className="max-w-md text-xs text-slate-400 leading-relaxed">
+            You have no active assessments waiting to be completed. Create a new workplace scenario to continue developing your behavioural skills.
           </p>
           <Link
             href="/dashboard?tab=create_interview"
-            className="inline-flex items-center justify-center rounded-full bg-[#1d243c] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-black"
+            className="mt-2 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-2.5 text-xs font-semibold text-white shadow-md shadow-violet-500/20 hover:brightness-110 transition-all"
           >
-            Create assessment
+            <span>Create Assessment</span>
+            <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
       ) : filteredRows.length === 0 ? (
-        <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 text-center">
-          <h3 className="text-lg font-semibold text-slate-900">
-            No matching assessments
-          </h3>
-          <p className="text-sm text-slate-600">
+        <div className="flex min-h-[300px] flex-col items-center justify-center gap-3 text-center">
+          <h3 className="text-base font-semibold text-white">No matching assessments</h3>
+          <p className="text-xs text-slate-400">
             Try another search term or clear the search field.
           </p>
-          <Button variant="outline" onClick={() => {
-            setGlobalFilter("");
-          }}>
+          <Button
+            variant="outline"
+            className="border-white/10 hover:bg-white/5 text-xs text-white"
+            onClick={() => setGlobalFilter("")}
+          >
             Clear search
           </Button>
         </div>
       ) : (
         <>
-          {query.isFetching && (
-            <p className="text-xs text-slate-500">Refreshing assessments…</p>
-          )}
           <div className="w-full overflow-x-auto">
             <Table className="w-full">
               <TableHeader>
                 {table.getHeaderGroups().map((group) => (
-                  <TableRow key={group.id}>
+                  <TableRow key={group.id} className="border-b border-white/10 hover:bg-transparent">
                     {group.headers.map((header) => (
                       <TableHead
                         key={header.id}
                         style={{ width: header.getSize() }}
-                        className="border-b-2 border-dotted border-gray-300 bg-transparent p-3 text-left"
+                        className="bg-transparent p-3 text-left"
                       >
                         {header.isPlaceholder
                           ? null
@@ -308,9 +300,12 @@ export function MockInterviewTable({
               </TableHeader>
               <TableBody>
                 {table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} className="border-none hover:bg-[#e7e9fb]">
+                  <TableRow
+                    key={row.id}
+                    className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                  >
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="p-4">
+                      <TableCell key={cell.id} className="p-3.5 text-sm">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
@@ -320,8 +315,8 @@ export function MockInterviewTable({
             </Table>
           </div>
 
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm text-slate-600">
+          <div className="flex items-center justify-between gap-3 border-t border-white/5 pt-3">
+            <p className="text-xs text-slate-400">
               Page {pagination.pageIndex + 1} of {Math.max(pageCount, 1)}
             </p>
             <div className="flex gap-2">
@@ -330,6 +325,7 @@ export function MockInterviewTable({
                 size="sm"
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
+                className="h-8 text-xs border-white/10 bg-slate-800/60 hover:bg-slate-800 text-slate-300"
               >
                 Previous
               </Button>
@@ -338,6 +334,7 @@ export function MockInterviewTable({
                 size="sm"
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
+                className="h-8 text-xs border-white/10 bg-slate-800/60 hover:bg-slate-800 text-slate-300"
               >
                 Next
               </Button>

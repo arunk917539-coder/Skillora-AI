@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "tsc --noEmit",
     "test:workplace": "tsc --typeRoots ./tests/types --target ES2020 --module commonjs --moduleResolution node --strict --skipLibCheck --outDir .test-build tests/types/process-env.d.ts app/lib/workplace/evaluator-types.ts app/lib/workplace/ollama-evaluator.ts app/lib/workplace/evaluation-service.ts app/lib/workplace/scoring.ts app/lib/workplace/scenarios.ts app/lib/workplace/development-plans.ts app/lib/workplace/progress.ts app/lib/workplace/safe-json.ts && node tests/workplace/run-tests.cjs",
+    "test:security": "node tests/security/run-security-tests.cjs",
     "audit:static": "node scripts/preflight-audit.cjs"
   },
   "dependencies": {

@@ -5,11 +5,19 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { Button } from "../ui/button";
 import { handleCreateInterviewFormAction } from "@/app/lib/form-actions";
 import { getAvailableCustomQuestions } from "@/app/lib/workplace/hr-questions";
 import { toast } from "sonner";
+import { Sparkles, Info, ArrowRight } from "lucide-react";
 
 type CustomScenarioSummary = {
   id: string;
@@ -58,32 +66,43 @@ const CreateInterviewForm = () => {
   }, [state, router]);
 
   return (
-    <div className="relative w-full overflow-hidden">
-      <Card className="flex w-full max-w-4xl flex-col border-none bg-transparent p-4 shadow-none">
-        <CardHeader className="mb-4 p-0">
-          <CardTitle className="text-center text-xl md:text-left md:text-2xl">
-            Create a workplace behaviour assessment
+    <div className="w-full">
+      <Card className="flex w-full flex-col border-none bg-transparent p-0 shadow-none">
+        <CardHeader className="mb-6 p-0 space-y-2">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-violet-500/30 bg-violet-500/10 text-xs font-semibold uppercase tracking-wider text-violet-300 w-fit">
+            <Sparkles className="h-3.5 w-3.5" />
+            Scenario Builder
+          </div>
+
+          <CardTitle className="text-2xl font-bold tracking-tight text-white">
+            Create a Workplace Assessment
           </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Explore realistic scenarios and reflect on your approach. Evaluation uses your local Ollama model; no hosted AI API key is required.
+
+          <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+            Explore authentic workplace scenarios and reflect on your approach. Evaluation uses your local Ollama model (`qwen3:4b`); no hosted API keys required.
           </p>
-          <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
-            Workplace Compass is a practice and learning tool. Its AI-generated feedback may be imperfect and is not a validated HR assessment. Do not use scores to make employment decisions.
-          </p>
+
+          <div className="flex items-start gap-2.5 rounded-xl border border-amber-500/25 bg-amber-950/25 p-3 text-xs text-amber-200/90 leading-relaxed">
+            <Info className="h-4 w-4 shrink-0 text-amber-400 mt-0.5" />
+            <span>
+              Skillora AI is an educational learning and practice tool. AI-generated feedback is rubric-based and formative, designed for skill development rather than employment screening.
+            </span>
+          </div>
         </CardHeader>
+
         <CardContent className="p-0">
           <form action={formAction} className="flex flex-col gap-5">
             {customScenarios.length > 0 && (
               <div className="flex flex-col gap-2">
-                <Label>Assessment Source</Label>
-                <div className="flex gap-3">
+                <Label className="text-xs font-medium text-slate-300">Assessment Source</Label>
+                <div className="flex gap-2.5">
                   <button
                     type="button"
                     onClick={() => setAssessmentSource("curated")}
-                    className={`px-4 py-2 text-sm rounded-lg border transition ${
+                    className={`px-4 py-2 text-xs font-medium rounded-xl border transition-all ${
                       assessmentSource === "curated"
-                        ? "bg-dark text-white border-dark font-medium"
-                        : "bg-white text-dark border-gray-300 hover:bg-gray-50"
+                        ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white border-transparent shadow-md shadow-violet-500/20"
+                        : "bg-slate-800/80 text-slate-400 border-white/10 hover:text-white"
                     }`}
                   >
                     Curated Scenarios
@@ -91,10 +110,10 @@ const CreateInterviewForm = () => {
                   <button
                     type="button"
                     onClick={() => setAssessmentSource("custom")}
-                    className={`px-4 py-2 text-sm rounded-lg border transition ${
+                    className={`px-4 py-2 text-xs font-medium rounded-xl border transition-all ${
                       assessmentSource === "custom"
-                        ? "bg-dark text-white border-dark font-medium"
-                        : "bg-white text-dark border-gray-300 hover:bg-gray-50"
+                        ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white border-transparent shadow-md shadow-violet-500/20"
+                        : "bg-slate-800/80 text-slate-400 border-white/10 hover:text-white"
                     }`}
                   >
                     HR Custom Scenarios ({customScenarios.length})
@@ -107,18 +126,20 @@ const CreateInterviewForm = () => {
               <>
                 <input type="hidden" name="customQuestionId" value={selectedCustomId} />
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="customQuestionSelect">Select Custom Scenario</Label>
-                  <Select
-                    value={selectedCustomId}
-                    onValueChange={setSelectedCustomId}
-                  >
-                    <SelectTrigger id="customQuestionSelect">
+                  <Label htmlFor="customQuestionSelect" className="text-xs font-medium text-slate-300">
+                    Select Custom Scenario
+                  </Label>
+                  <Select value={selectedCustomId} onValueChange={setSelectedCustomId}>
+                    <SelectTrigger
+                      id="customQuestionSelect"
+                      className="h-11 rounded-xl border border-white/10 bg-slate-900/90 text-sm text-white"
+                    >
                       <SelectValue placeholder="Choose a scenario" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="rounded-xl border border-white/10 bg-slate-900 text-white shadow-2xl">
                       <SelectGroup>
                         {customScenarios.map((item) => (
-                          <SelectItem key={item.id} value={item.id}>
+                          <SelectItem key={item.id} value={item.id} className="hover:bg-white/10 focus:bg-white/10">
                             {item.title} ({item.category} • {item.difficulty})
                           </SelectItem>
                         ))}
@@ -128,11 +149,11 @@ const CreateInterviewForm = () => {
                 </div>
 
                 {customScenarios.find((x) => x.id === selectedCustomId) && (
-                  <div className="rounded-lg border bg-slate-50 p-3 text-sm">
-                    <span className="font-semibold text-xs text-muted-foreground uppercase tracking-wider block mb-1">
+                  <div className="rounded-xl border border-white/10 bg-slate-800/50 p-4 text-xs space-y-1">
+                    <span className="font-semibold text-[10px] text-violet-400 uppercase tracking-wider block">
                       Scenario Preview:
                     </span>
-                    <p className="text-dark">
+                    <p className="text-slate-200 leading-relaxed">
                       {customScenarios.find((x) => x.id === selectedCustomId)?.question}
                     </p>
                   </div>
@@ -140,24 +161,33 @@ const CreateInterviewForm = () => {
               </>
             ) : (
               <>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="name">Assessment title</Label>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="name" className="text-xs font-medium text-slate-300">
+                    Assessment Title
+                  </Label>
                   <Input
                     id="name"
                     name="name"
-                    placeholder="e.g. Teamwork and communication"
+                    placeholder="e.g. Cross-Functional Alignment & Communication"
                     minLength={2}
                     maxLength={100}
                     required
+                    className="h-11 rounded-xl border border-white/10 bg-slate-900/90 px-4 text-sm text-white placeholder:text-slate-500 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
                   />
                 </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="type">Competency focus</Label>
+
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="type" className="text-xs font-medium text-slate-300">
+                    Competency Focus
+                  </Label>
                   <Select name="type" required defaultValue="Communication">
-                    <SelectTrigger id="type">
+                    <SelectTrigger
+                      id="type"
+                      className="h-11 rounded-xl border border-white/10 bg-slate-900/90 text-sm text-white"
+                    >
                       <SelectValue placeholder="Choose a competency" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="rounded-xl border border-white/10 bg-slate-900 text-white shadow-2xl">
                       <SelectGroup>
                         {[
                           "Communication",
@@ -166,7 +196,7 @@ const CreateInterviewForm = () => {
                           "Ethical Decision-Making",
                           "Prioritization",
                         ].map((item) => (
-                          <SelectItem key={item} value={item}>
+                          <SelectItem key={item} value={item} className="hover:bg-white/10 focus:bg-white/10">
                             {item}
                           </SelectItem>
                         ))}
@@ -174,17 +204,23 @@ const CreateInterviewForm = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="difficultyLevel">Scenario difficulty</Label>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="difficultyLevel" className="text-xs font-medium text-slate-300">
+                      Scenario Difficulty
+                    </Label>
                     <Select name="difficultyLevel" required defaultValue="Medium">
-                      <SelectTrigger id="difficultyLevel">
+                      <SelectTrigger
+                        id="difficultyLevel"
+                        className="h-11 rounded-xl border border-white/10 bg-slate-900/90 text-sm text-white"
+                      >
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="rounded-xl border border-white/10 bg-slate-900 text-white shadow-2xl">
                         <SelectGroup>
                           {["Easy", "Medium", "Hard"].map((item) => (
-                            <SelectItem key={item} value={item}>
+                            <SelectItem key={item} value={item} className="hover:bg-white/10 focus:bg-white/10">
                               {item}
                             </SelectItem>
                           ))}
@@ -192,16 +228,22 @@ const CreateInterviewForm = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="numberOfQuestions">Number of scenarios</Label>
+
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="numberOfQuestions" className="text-xs font-medium text-slate-300">
+                      Number of Scenarios
+                    </Label>
                     <Select name="numberOfQuestions" required defaultValue="3">
-                      <SelectTrigger id="numberOfQuestions">
+                      <SelectTrigger
+                        id="numberOfQuestions"
+                        className="h-11 rounded-xl border border-white/10 bg-slate-900/90 text-sm text-white"
+                      >
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="rounded-xl border border-white/10 bg-slate-900 text-white shadow-2xl">
                         <SelectGroup>
                           {["1", "2", "3"].map((item) => (
-                            <SelectItem key={item} value={item}>
+                            <SelectItem key={item} value={item} className="hover:bg-white/10 focus:bg-white/10">
                               {item}
                             </SelectItem>
                           ))}
@@ -214,13 +256,26 @@ const CreateInterviewForm = () => {
             )}
 
             {state.errors?.general && (
-              <p role="alert" className="text-sm text-red-600">
+              <p role="alert" className="text-xs text-rose-400 bg-rose-950/40 border border-rose-800/40 p-2.5 rounded-xl">
                 {state.errors.general}
               </p>
             )}
-            <Button type="submit" disabled={pending} className="w-full md:w-auto">
-              {pending ? "Creating assessment…" : "Create assessment"}
-            </Button>
+
+            <button
+              type="submit"
+              disabled={pending}
+              className="mt-2 inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-violet-500/25 transition-all duration-200 hover:brightness-110 active:scale-[0.99] disabled:opacity-50 cursor-pointer"
+            >
+              <span>{pending ? "Creating assessment…" : "Create Assessment"}</span>
+              <ArrowRight className="h-4 w-4" />
+            </button>
+
+            <p className="text-center text-[11px] text-slate-500 pt-1">
+              Assessment responses are processed on-premise by our local Ollama AI model. Review our{" "}
+              <a href="/privacy" target="_blank" className="text-violet-400 hover:underline">
+                Privacy Policy
+              </a>.
+            </p>
           </form>
         </CardContent>
       </Card>

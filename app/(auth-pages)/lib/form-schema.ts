@@ -14,6 +14,12 @@ export const signUpFormSchema = z.object({
       .string()
       .trim()
       .min(8, { message: "Must be at least 8 characters" }),
+    termsConsent: z.preprocess(
+      (val) => val === "on" || val === true || val === "true",
+      z.literal(true, {
+        errorMap: () => ({ message: "You must acknowledge the Terms & Conditions and Privacy Policy to create an account." }),
+      })
+    ),
   })
   .refine((data) => data.password === data.confirmpassword, {
     message: "Passwords do not match",

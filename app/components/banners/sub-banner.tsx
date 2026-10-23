@@ -1,42 +1,28 @@
-import React from 'react';
+import React from "react";
 
 const workplaceBenefits = [
-    "Realistic Scenarios",
-    "Rubric-Based Feedback",
-    "Practical Next Steps",
-    "Five Competency Areas",
-    "Written Reflection",
-    "Repeatable Practice",
-    "Progress Tracking"
+  { label: "Realistic Scenarios", accent: "text-cyan-400 border-cyan-500/20 bg-cyan-950/20" },
+  { label: "Rubric-Based Feedback", accent: "text-violet-400 border-violet-500/20 bg-violet-950/20" },
+  { label: "Practical Next Steps", accent: "text-amber-400 border-amber-500/20 bg-amber-950/20" },
+  { label: "Five Competency Areas", accent: "text-blue-400 border-blue-500/20 bg-blue-950/20" },
+  { label: "Written Reflection", accent: "text-indigo-400 border-indigo-500/20 bg-indigo-950/20" },
+  { label: "Repeatable Practice", accent: "text-purple-400 border-purple-500/20 bg-purple-950/20" },
+  { label: "Progress Tracking", accent: "text-emerald-400 border-emerald-500/20 bg-emerald-950/20" },
 ];
-
-
-const vibrantColors = [
-    'text-emerald-500', 
-    'text-rose-500',    
-    'text-amber-500',   
-    'text-blue-600',   
-    'text-fuchsia-500', 
-    'text-purple-600',  
-    'text-cyan-500',    
-];
-
 
 const SubBanner = () => {
-    return (
-        <section className='flex-wrap hidden md:flex justify-center gap-6 px-4 mt-10 md:mt-20'>
-            {
-                workplaceBenefits.map((item, index) => (
-                    <span
-                        key={index}
-                        className={`text-xl text-center font-bold ${vibrantColors[index]} drop-shadow-md items-center hover:drop-shadow-xl hover:scale-110 hover:brightness-110 transition-all duration-500 ease-in-out px-5 py-3 rounded-full bg-white border border-gray-200 shadow-sm cursor-pointer`}
-                    >
-                        {item}
-                    </span>
-                ))
-            }
-        </section>
-    );
+  return (
+    <section className="hidden md:flex flex-wrap justify-center gap-3.5 px-4 my-8 md:my-12">
+      {workplaceBenefits.map((item, index) => (
+        <span
+          key={index}
+          className={`text-sm font-medium ${item.accent} px-4 py-2 rounded-full border shadow-sm backdrop-blur transition-all duration-300 hover:scale-105 hover:brightness-125 cursor-default`}
+        >
+          {item.label}
+        </span>
+      ))}
+    </section>
+  );
 };
 
 export default SubBanner;

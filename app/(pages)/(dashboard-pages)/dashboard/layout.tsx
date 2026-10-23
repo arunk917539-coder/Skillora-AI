@@ -17,7 +17,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Workplace Compass | Dashboard",
+  title: "Skillora AI | Dashboard",
   description: "Review workplace assessments, competency scores, and development progress.",
 };
 
@@ -28,12 +28,14 @@ export default async function Layout({
 }>) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
+
   return (
-    <html lang="en" className="h-full w-full">
-      <body className="gradient h-screen w-full">
-        <div className="relative h-full w-full">
-          <div className="pointer-events-none absolute right-0 top-0 h-[500px] w-[500px] -translate-x-[10%] translate-y-[20%] rounded-full bg-[#898da5] opacity-50 blur-[80px] brightness-200" />
-          <div className="pointer-events-none absolute right-0 top-0 h-[500px] w-[500px] -translate-x-[220%] translate-y-[30%] rounded-full bg-[#5a5f7a] opacity-50 blur-[80px] brightness-200" />
+    <html lang="en" className="dark h-full w-full">
+      <body className={`${spaceGrotesk.className} gradient min-h-screen w-full text-slate-100 selection:bg-violet-600 selection:text-white`}>
+        <div className="relative min-h-screen w-full">
+          {/* Refined enterprise subtle glow accents */}
+          <div className="pointer-events-none absolute right-1/4 top-0 h-[400px] w-[500px] -translate-y-[20%] rounded-full bg-violet-600/10 blur-[120px]" />
+          <div className="pointer-events-none absolute left-1/4 top-20 h-[400px] w-[500px] rounded-full bg-blue-600/10 blur-[120px]" />
 
           <div className="mx-auto w-full max-w-full px-4 sm:max-w-[540px] sm:px-6 md:max-w-[720px] md:px-8 lg:max-w-[960px] xl:max-w-[1280px]">
             <Provider>

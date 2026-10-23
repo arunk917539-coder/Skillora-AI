@@ -4,18 +4,32 @@ import { NextResponse } from "next/server";
 import { RUBRIC_VERSION, type CompetencyKey, type CompetencyScores } from "@/app/lib/workplace/scoring";
 import { evaluateWorkplaceAnswer } from "@/app/lib/workplace/evaluation-service";
 import { buildDevelopmentPlan } from "@/app/lib/workplace/development-plans";
+import { checkRateLimit } from "@/app/lib/security/rate-limiter";
+import { logSecurityEvent } from "@/app/lib/security/audit-logger";
 
 export async function POST(req: Request) {
   const session = await auth();
   const userId = session?.user?.id;
   if (!userId) return NextResponse.json({ error: "Please sign in first." }, { status: 401 });
 
+  // Rate limit expensive local AI evaluation to 6 requests per minute per user
+  const rateLimit = checkRateLimit(`eval:${userId}`, 6, 60 * 1000);
+  if (!rateLimit.success) {
+    return NextResponse.json(
+      { error: "Too many assessment evaluation requests. Please wait a moment before submitting again." },
+      { status: 429 }
+    );
+  }
+
   try {
     const body: unknown = await req.json();
     if (!body || typeof body !== "object" || Array.isArray(body)) return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
-    const { id, answers } = body as { id?: unknown; answers?: unknown };
+    const { id, answers, consentAcknowledged } = body as { id?: unknown; answers?: unknown; consentAcknowledged?: unknown };
     if (typeof id !== "string" || !id.trim() || !Array.isArray(answers) || answers.length === 0 || answers.length > 3) {
       return NextResponse.json({ error: "A valid assessment ID and 1–3 answers are required." }, { status: 400 });
+    }
+    if (consentAcknowledged !== undefined && consentAcknowledged !== true) {
+      return NextResponse.json({ error: "Affirmative acknowledgment of AI evaluation terms is required." }, { status: 400 });
     }
     const normalizedAnswers = answers.map((item: unknown) => {
       if (!item || typeof item !== "object") return null;
@@ -116,6 +130,18 @@ export async function POST(req: Request) {
         data: { interviewId: assessment.id, ...feedbackData },
       });
     });
+
+    logSecurityEvent({
+      timestamp: new Date().toISOString(),
+      action: "ASSESSMENT_SUBMITTED",
+      actorUserId: userId,
+      targetId: assessment.id,
+      details: {
+        scoreAverage: average,
+        scenarioCount: normalizedAnswers.length,
+      },
+    });
+
     return NextResponse.json({ success: true, average, scores: evaluated, competencies: Object.fromEntries(assessedCompetencies.map((key) => [key, competencies[key]])), assessedCompetencies, recommendations, feedback, evaluator: "ollama-workplace-evaluator-v1", rubricVersion: RUBRIC_VERSION });
   } catch (error) {
     if (error instanceof SyntaxError) {
@@ -124,7 +150,7 @@ export async function POST(req: Request) {
     if (error instanceof Error && error.message === "ASSESSMENT_ALREADY_COMPLETED") {
       return NextResponse.json({ error: "This assessment has already been completed." }, { status: 409 });
     }
-    console.error("Assessment completion failed", error);
+    console.error("Assessment completion failed:", error instanceof Error ? error.message : "Internal evaluation error");
     const message = error instanceof Error ? error.message : "Could not evaluate this assessment.";
     if (/Ollama|model|evaluation|scenario rubric|timed out|schema validation/i.test(message)) {
       return NextResponse.json({ error: `${message} Start Ollama and ensure the configured model is available, then try again. No score was saved.` }, { status: 503 });

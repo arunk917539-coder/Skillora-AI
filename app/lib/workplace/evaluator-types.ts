@@ -11,6 +11,13 @@ export type SemanticAnswerEvaluation = {
   evaluator: string;
   rubricVersion: string;
   exampleStrongResponse: string;
+  reasoning?: string;
+  correctElements?: string[];
+  criticalErrors?: string[];
+  criticalOmissions?: string[];
+  meetsSubstantiveIntent?: boolean;
+  uncertaintyFlag?: boolean;
+  reviewRequired?: boolean;
 };
 export function getEvaluationValidationError(value: unknown, expected: CompetencyKey[]): string | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return "Evaluation output is not a JSON object.";
@@ -89,6 +96,18 @@ export function normalizeEvaluationPayload(raw: unknown, expected: CompetencyKey
   obj.evidence = ensureStringArray(obj.evidence);
   obj.strengths = ensureStringArray(obj.strengths);
   obj.improvements = ensureStringArray(obj.improvements);
+  if (obj.correctElements) obj.correctElements = ensureStringArray(obj.correctElements);
+  if (obj.criticalErrors) obj.criticalErrors = ensureStringArray(obj.criticalErrors);
+  if (obj.criticalOmissions) obj.criticalOmissions = ensureStringArray(obj.criticalOmissions);
+  if (typeof obj.meetsSubstantiveIntent === "string") {
+    obj.meetsSubstantiveIntent = obj.meetsSubstantiveIntent === "true";
+  }
+  if (typeof obj.reviewRequired === "string") {
+    obj.reviewRequired = obj.reviewRequired === "true";
+  }
+  if (typeof obj.reasoning !== "string" && obj.reasoning) {
+    obj.reasoning = String(obj.reasoning);
+  }
 
   if (Array.isArray(obj.criterionEvaluations)) {
     const normalizedCriteria: CriterionEvaluation[] = [];

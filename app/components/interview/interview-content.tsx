@@ -8,6 +8,8 @@ import { DevelopmentPlan } from "@/app/components/dashboard/development-plan";
 import type { DevelopmentAction } from "@/app/lib/workplace/development-plans";
 import type { CompetencyScores } from "@/app/lib/workplace/scoring";
 import { parseStoredArray, parseStoredNumberRecord } from "@/app/lib/workplace/safe-json";
+import { ArrowLeft, ArrowRight, CheckCircle2, AlertCircle, Sparkles, Target, Cpu, ShieldAlert } from "lucide-react";
+import Link from "next/link";
 
 type EvaluatedAnswer = {
   question: string;
@@ -59,6 +61,7 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
   const [index, setIndex] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [consentAcknowledged, setConsentAcknowledged] = useState(false);
   const [result, setResult] = useState<{
     average: number;
     feedback: string;
@@ -68,6 +71,10 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
   } | null>(null);
 
   async function submit() {
+    if (!consentAcknowledged) {
+      setError("Please acknowledge the AI evaluation notice before submitting.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -76,6 +83,7 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: assessment.id,
+          consentAcknowledged: true,
           answers: questions.map((question, i) => ({
             question,
             answer: answers[i] || "",
@@ -173,34 +181,68 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
     ].slice(0, 3);
 
     return (
-      <Card className="mx-auto mt-8 max-w-4xl shadow-md border bg-white/90">
-        <CardHeader className="border-b pb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <span className="inline-block mb-1 text-xs px-2.5 py-0.5 rounded-full border border-gray-300 font-medium">
+      <Card className="mx-auto my-8 max-w-4xl border border-white/10 bg-slate-900/85 backdrop-blur-xl shadow-2xl rounded-3xl overflow-hidden">
+        <CardHeader className="border-b border-white/10 p-6 sm:p-8 bg-slate-900/90">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1.5">
+              <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1 rounded-full border border-violet-500/30 bg-violet-500/10 font-semibold uppercase tracking-wider text-violet-300">
+                <Sparkles className="h-3 w-3" />
                 {assessment.type}
               </span>
-              <CardTitle className="text-2xl font-bold">Assessment Results</CardTitle>
+              <CardTitle className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+                Assessment Results
+              </CardTitle>
+              <p className="text-xs text-slate-400">
+                Scenario: <strong className="text-slate-200">{assessment.name}</strong>
+              </p>
             </div>
-            <div className="text-right">
-              <span className="text-xs text-muted-foreground block">Overall Score</span>
-              <span className="text-2xl font-bold text-dark">{score} / 100</span>
+            <div className="flex flex-col sm:items-end justify-center rounded-2xl border border-emerald-500/30 bg-emerald-950/30 p-4 sm:px-6">
+              <span className="text-[11px] uppercase tracking-wider text-emerald-400 font-semibold block">
+                Overall Score
+              </span>
+              <span className="text-3xl font-extrabold font-mono text-white">
+                {score} <span className="text-sm font-normal text-emerald-400">/ 100</span>
+              </span>
             </div>
           </div>
-          <CardDescription>
-            Detailed scenario-by-scenario evaluation and development guidance powered by local Ollama evaluation.
+          <CardDescription className="text-xs text-slate-400 pt-2">
+            Detailed scenario-by-scenario evaluation and formative development guidance powered by local Ollama AI.
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="space-y-8 pt-6">
-          {/* SECTION I: SCENARIO-BY-SCENARIO RESULTS (Items 1 - 5 for each scenario) */}
+        <CardContent className="space-y-8 p-6 sm:p-8">
+          {/* AI ASSESSMENT SAFEGUARD & HUMAN REVIEW NOTICE */}
+          <div className="rounded-2xl border border-amber-500/25 bg-amber-500/10 p-4 text-xs text-amber-200/90 leading-relaxed space-y-2">
+            <div className="flex items-center gap-2 font-semibold text-amber-300">
+              <ShieldAlert className="h-4 w-4 shrink-0" />
+              <span>Formative Practice Feedback Notice</span>
+            </div>
+            <p className="text-slate-300">
+              This assessment was evaluated using a local Ollama AI model against predetermined workplace competency rubrics.
+              Scores and insights are advisory learning tools for professional reflection, not standardized psychometrics or certified hiring signals.
+              Organizational policies must require meaningful human review before making consequential employment or promotion decisions.
+            </p>
+            <div className="pt-1 flex items-center justify-between border-t border-amber-500/20 text-[11px]">
+              <span className="text-slate-400">Questions or discrepancy in feedback?</span>
+              <Link href="/privacy" className="text-violet-400 underline hover:text-violet-300 font-medium">
+                Review Privacy & Human Review Policy
+              </Link>
+            </div>
+          </div>
+
+          {/* SECTION I: SCENARIO-BY-SCENARIO RESULTS */}
           <div className="space-y-6">
-            <h3 className="text-lg font-bold text-dark border-b pb-2">
-              Scenario-by-Scenario Assessment Results
-            </h3>
+            <div className="flex items-center justify-between border-b border-white/5 pb-2">
+              <h3 className="text-lg font-bold text-white tracking-tight">
+                Scenario-by-Scenario Evaluation
+              </h3>
+              <span className="text-xs text-slate-400 font-mono">
+                {evaluatedAnswers.length} Scenarios
+              </span>
+            </div>
 
             {evaluatedAnswers.length === 0 ? (
-              <p className="text-sm text-muted-foreground italic">
+              <p className="text-xs text-slate-500 italic">
                 Detailed scenario feedback is being processed or was not recorded for this historical run.
               </p>
             ) : (
@@ -214,82 +256,77 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
                 return (
                   <div
                     key={`${answerIndex}-${item.question.slice(0, 20)}`}
-                    className="rounded-xl border bg-card p-5 space-y-4 shadow-sm"
+                    className="rounded-2xl border border-white/10 bg-slate-800/40 p-6 space-y-4 shadow-md backdrop-blur"
                   >
-                    <div className="flex items-center justify-between border-b pb-2">
-                      <span className="font-bold text-sm text-dark">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                      <span className="font-bold text-sm text-violet-300">
                         Scenario {answerIndex + 1} of {evaluatedAnswers.length}
                       </span>
-                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-dark border">
+                      <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-slate-900 border border-white/10 text-white">
                         Score: {item.score} / 100
                       </span>
                     </div>
 
                     {/* 1. Scenario question */}
                     <div className="space-y-1">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                         1. Scenario Question
                       </h4>
-                      <p className="rounded-lg border bg-slate-50 p-3 text-sm font-medium text-dark leading-relaxed">
+                      <p className="rounded-xl border border-white/5 bg-slate-900/60 p-4 text-sm font-medium text-slate-100 leading-relaxed">
                         {item.question}
                       </p>
                     </div>
 
                     {/* 2. Your submitted answer */}
                     <div className="space-y-1">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                        2. Your Submitted Answer
+                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        2. Your Submitted Response
                       </h4>
-                      <p className="rounded-lg border bg-white p-3 text-sm whitespace-pre-wrap text-dark leading-relaxed">
+                      <p className="rounded-xl border border-white/5 bg-slate-950/60 p-4 text-xs sm:text-sm whitespace-pre-wrap text-slate-200 leading-relaxed font-mono">
                         {item.answer}
                       </p>
                     </div>
 
                     {/* 3. Expected answer */}
                     <div className="space-y-1">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                        3. Expected Answer
+                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                        3. Authoritative Strong Response Criteria
                       </h4>
-                      <div className="rounded-lg border border-amber-200/80 bg-amber-50/60 p-3 text-sm">
-                        <p className="text-dark italic leading-relaxed">{expectedAns}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Authoritative strong response criteria for this scenario.
-                        </p>
+                      <div className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-4 text-xs sm:text-sm text-amber-200/90 leading-relaxed">
+                        <p className="italic">{expectedAns}</p>
                       </div>
                     </div>
 
-                    {/* 4. Individual score */}
+                    {/* 4. Individual score & Rubric breakdown */}
                     <div className="space-y-2">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                        4. Individual Score
+                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        4. Competency Breakdown
                       </h4>
-                      <div className="rounded-lg border bg-slate-50/80 p-3 space-y-3">
+                      <div className="rounded-xl border border-white/5 bg-slate-900/60 p-4 space-y-3">
                         <div className="flex items-baseline gap-2">
-                          <span className="text-2xl font-bold text-dark">{item.score}</span>
-                          <span className="text-sm text-muted-foreground">/ 100 ({item.score}%)</span>
+                          <span className="text-2xl font-bold font-mono text-white">{item.score}</span>
+                          <span className="text-xs text-slate-400">/ 100 ({item.score}%)</span>
                         </div>
 
-                        {/* Applicable rubric breakdown */}
                         {item.criterionEvaluations && item.criterionEvaluations.length > 0 && (
-                          <div className="space-y-2 pt-1 border-t">
-                            <p className="text-xs font-semibold text-muted-foreground">
-                              Rubric Breakdown:
-                            </p>
-                            <div className="grid gap-2 sm:grid-cols-2">
+                          <div className="space-y-2 pt-2 border-t border-white/5">
+                            <div className="grid gap-2.5 sm:grid-cols-2">
                               {item.criterionEvaluations.map((crit, cIdx) => (
                                 <div
                                   key={cIdx}
-                                  className="rounded border bg-white p-2.5 text-xs space-y-1"
+                                  className="rounded-lg border border-white/5 bg-slate-800/60 p-3 text-xs space-y-1"
                                 >
                                   <div className="flex justify-between items-center font-medium">
-                                    <span className="capitalize text-dark">
+                                    <span className="capitalize text-slate-200">
                                       {crit.competency.replace(/([A-Z])/g, " $1")}
                                     </span>
-                                    <span className="font-semibold text-dark">
+                                    <span className="font-mono font-semibold text-violet-300">
                                       {crit.score} / 100
                                     </span>
                                   </div>
-                                  <p className="text-muted-foreground">{crit.rationale}</p>
+                                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                                    {crit.rationale}
+                                  </p>
                                 </div>
                               ))}
                             </div>
@@ -300,14 +337,17 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
 
                     {/* 5. Feedback */}
                     <div className="space-y-2">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                        5. Feedback
+                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        5. Evidence & Evaluative Feedback
                       </h4>
-                      <div className="rounded-lg border bg-slate-50/80 p-3 text-sm space-y-2">
+                      <div className="rounded-xl border border-white/5 bg-slate-900/60 p-4 text-xs space-y-3">
                         {item.strengths && item.strengths.length > 0 && (
-                          <div>
-                            <p className="font-semibold text-xs text-emerald-800">What was done well:</p>
-                            <ul className="list-disc pl-5 text-xs text-dark space-y-0.5 mt-0.5">
+                          <div className="rounded-lg border border-emerald-500/20 bg-emerald-950/20 p-3 space-y-1">
+                            <p className="font-semibold text-xs text-emerald-400 flex items-center gap-1.5">
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              What was done well:
+                            </p>
+                            <ul className="list-disc pl-5 text-xs text-emerald-200/90 space-y-0.5 mt-1">
                               {item.strengths.map((str, sIdx) => (
                                 <li key={sIdx}>{str}</li>
                               ))}
@@ -316,9 +356,12 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
                         )}
 
                         {item.improvements && item.improvements.length > 0 && (
-                          <div>
-                            <p className="font-semibold text-xs text-amber-900">What could be improved:</p>
-                            <ul className="list-disc pl-5 text-xs text-dark space-y-0.5 mt-0.5">
+                          <div className="rounded-lg border border-amber-500/20 bg-amber-950/20 p-3 space-y-1">
+                            <p className="font-semibold text-xs text-amber-400 flex items-center gap-1.5">
+                              <AlertCircle className="h-3.5 w-3.5" />
+                              What could be improved:
+                            </p>
+                            <ul className="list-disc pl-5 text-xs text-amber-200/90 space-y-0.5 mt-1">
                               {item.improvements.map((imp, iIdx) => (
                                 <li key={iIdx}>{imp}</li>
                               ))}
@@ -327,11 +370,11 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
                         )}
 
                         {item.evidence && item.evidence.length > 0 && (
-                          <div>
-                            <p className="font-semibold text-xs text-muted-foreground">
-                              Verified response snippets:
+                          <div className="rounded-lg border border-white/5 bg-slate-800/40 p-3 space-y-1">
+                            <p className="font-semibold text-[11px] text-slate-400">
+                              Verified answer snippets:
                             </p>
-                            <ul className="list-disc pl-5 text-xs text-muted-foreground space-y-0.5 mt-0.5">
+                            <ul className="list-disc pl-5 text-[11px] text-slate-400 space-y-0.5 mt-1 font-mono">
                               {item.evidence.map((ev, evIdx) => (
                                 <li key={evIdx}>&ldquo;{ev}&rdquo;</li>
                               ))}
@@ -346,100 +389,84 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
             )}
           </div>
 
-          {/* SECTION II: OVERALL RESULTS (Items 6 - 10) */}
-          <div className="mt-8 border-t-2 pt-6 space-y-6">
-            <h3 className="text-lg font-bold text-dark border-b pb-2">
+          {/* SECTION II: OVERALL RESULTS */}
+          <div className="border-t border-white/10 pt-6 space-y-6">
+            <h3 className="text-lg font-bold text-white tracking-tight border-b border-white/5 pb-2">
               Overall Assessment Evaluation
             </h3>
 
-            {/* 6. Overall assessment score */}
+            {/* Overall Feedback */}
             <div className="space-y-1">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                6. Overall Assessment Score
+              <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Formative Summary
               </h4>
-              <div className="rounded-xl border bg-slate-50 p-4">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-extrabold text-dark">{score}</span>
-                  <span className="text-base text-muted-foreground">/ 100 ({score}%)</span>
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Mean average across all {evaluatedAnswers.length || 1} evaluated scenario responses.
-                </p>
-              </div>
-            </div>
-
-            {/* 7. Overall feedback */}
-            <div className="space-y-1">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                7. Overall Feedback
-              </h4>
-              <div className="rounded-lg border bg-white p-4 text-sm leading-relaxed text-dark">
+              <div className="rounded-xl border border-white/5 bg-slate-800/50 p-4 text-xs sm:text-sm leading-relaxed text-slate-200 whitespace-pre-wrap">
                 {feedback}
               </div>
             </div>
 
-            {/* 8. Strengths */}
-            <div className="space-y-1">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                8. Strengths
-              </h4>
-              <div className="rounded-lg border bg-emerald-50/60 border-emerald-200 p-4 text-sm">
-                {allStrengths.length > 0 ? (
-                  <ul className="list-disc pl-5 space-y-1 text-emerald-950">
-                    {allStrengths.map((str, i) => (
-                      <li key={i}>{str}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-muted-foreground italic">
-                    Demonstrated constructive workplace intent across assessed scenarios.
-                  </p>
-                )}
+            {/* Strengths & Improvements in 2 cols */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <h4 className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                  Key Strengths
+                </h4>
+                <div className="rounded-xl border border-emerald-500/20 bg-emerald-950/20 p-4 text-xs text-emerald-200/90">
+                  {allStrengths.length > 0 ? (
+                    <ul className="list-disc pl-5 space-y-1">
+                      {allStrengths.map((str, i) => (
+                        <li key={i}>{str}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="italic text-slate-400">Demonstrated constructive workplace approach.</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <h4 className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                  Development Opportunities
+                </h4>
+                <div className="rounded-xl border border-amber-500/20 bg-amber-950/20 p-4 text-xs text-amber-200/90">
+                  {allImprovements.length > 0 ? (
+                    <ul className="list-disc pl-5 space-y-1">
+                      {allImprovements.map((imp, i) => (
+                        <li key={i}>{imp}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="italic text-slate-400">Continue refining clarity and follow-through.</p>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* 9. Areas for improvement */}
-            <div className="space-y-1">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                9. Areas for Improvement
-              </h4>
-              <div className="rounded-lg border bg-amber-50/60 border-amber-200 p-4 text-sm">
-                {allImprovements.length > 0 ? (
-                  <ul className="list-disc pl-5 space-y-1 text-amber-950">
-                    {allImprovements.map((imp, i) => (
-                      <li key={i}>{imp}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-muted-foreground italic">
-                    Continue refining clarity and follow-through in high-stakes communication.
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* 10. Actionable development recommendations */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                10. Actionable Development Recommendations
-              </h4>
+            {/* Actionable Development Recommendations */}
+            <div className="space-y-2 pt-2">
               <DevelopmentPlan items={result?.recommendations || storedRecommendations || []} />
             </div>
           </div>
 
-          <p className="text-xs text-muted-foreground pt-4">
-            Ollama-powered AI practice feedback evaluates against explicit scenario rubrics.
-            Scores are designed for learning and reflection, not for employment or hiring decisions.
+          <p className="text-[11px] text-slate-500 pt-2">
+            Skillora AI evaluation is rubric-guided and powered by local Ollama AI. Scores are designed for self-reflection and professional development, not for hiring or performance evaluations.
           </p>
 
-          <div className="flex flex-wrap gap-3 pt-2">
-            <Button onClick={() => router.push("/dashboard")}>Back to dashboard</Button>
-            <Button
-              variant="outline"
-              onClick={() => router.push("/dashboard?tab=create_interview")}
+          <div className="flex flex-wrap gap-3 pt-2 border-t border-white/5">
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-2.5 text-xs font-semibold text-white shadow-md shadow-violet-500/25 hover:brightness-110 transition-all cursor-pointer"
             >
-              Practise another scenario
-            </Button>
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span>Back to Dashboard</span>
+            </button>
+            <button
+              onClick={() => router.push("/dashboard?tab=create_interview")}
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-slate-800 px-6 py-2.5 text-xs font-medium text-slate-200 hover:text-white hover:bg-slate-700 transition-all cursor-pointer"
+            >
+              <span>Practise Another Scenario</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
           </div>
         </CardContent>
       </Card>
@@ -448,82 +475,130 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
 
   if (!questions.length) {
     return (
-      <Card className="mx-auto mt-8 max-w-3xl">
-        <CardContent className="p-6 text-center">
-          <p className="text-muted-foreground mb-4">No scenarios were found for this assessment.</p>
-          <Button onClick={() => router.push("/dashboard")}>Return to Dashboard</Button>
+      <Card className="mx-auto mt-8 max-w-xl border border-white/10 bg-slate-900/80 backdrop-blur-xl shadow-2xl rounded-3xl p-6 text-center">
+        <CardContent className="space-y-4 p-0">
+          <p className="text-sm text-slate-400">No scenarios were found for this assessment.</p>
+          <Button
+            onClick={() => router.push("/dashboard")}
+            className="rounded-full bg-violet-600 hover:bg-violet-500 text-white text-xs"
+          >
+            Return to Dashboard
+          </Button>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="mx-auto mt-8 max-w-3xl shadow-sm">
-      <CardHeader>
-        <p className="text-sm text-muted-foreground">
-          Workplace behaviour assessment · {assessment.type}
-        </p>
-        <CardTitle>{assessment.name}</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Scenario {index + 1} of {questions.length}
-        </p>
+    <Card className="mx-auto my-8 max-w-3xl border border-white/10 bg-slate-900/80 backdrop-blur-xl shadow-2xl rounded-3xl overflow-hidden">
+      <CardHeader className="border-b border-white/10 p-6 sm:p-8 bg-slate-900/90 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-wider text-violet-400 bg-violet-950/60 border border-violet-500/30 px-3 py-1 rounded-full">
+            {assessment.type}
+          </span>
+          <span className="text-xs font-mono font-medium text-slate-400">
+            Scenario {index + 1} of {questions.length}
+          </span>
+        </div>
+        <CardTitle className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+          {assessment.name}
+        </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-5">
-        <div className="rounded-xl bg-muted p-5 text-lg leading-relaxed font-medium text-dark">
+
+      <CardContent className="space-y-6 p-6 sm:p-8">
+        <div className="rounded-2xl border border-white/10 bg-slate-800/60 p-5 text-base sm:text-lg leading-relaxed font-medium text-white shadow-inner">
           {questions[index]}
         </div>
 
-        <label htmlFor="response" className="block text-sm font-semibold">
-          How would you respond?
-        </label>
-        <textarea
-          id="response"
-          rows={7}
-          value={answers[index] || ""}
-          onChange={(e) =>
-            setAnswers((old) =>
-              old.map((answer, i) => (i === index ? e.target.value : answer))
-            )
-          }
-          placeholder="Explain your approach, who you would involve, and what you would do next."
-          className="w-full rounded-md border border-input bg-background p-3 text-sm shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
+        <div className="space-y-2">
+          <label htmlFor="response" className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+            How would you respond in this workplace situation?
+          </label>
+          <textarea
+            id="response"
+            rows={7}
+            value={answers[index] || ""}
+            onChange={(e) =>
+              setAnswers((old) =>
+                old.map((answer, i) => (i === index ? e.target.value : answer))
+              )
+            }
+            placeholder="Explain your approach, who you would involve, what trade-offs you consider, and what concrete next steps you would take."
+            className="w-full rounded-2xl border border-white/10 bg-slate-950/80 p-4 text-sm text-white placeholder:text-slate-500 shadow-inner outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 leading-relaxed font-sans"
+          />
+        </div>
+
+        {index === questions.length - 1 && (
+          <div className="rounded-2xl border border-violet-500/25 bg-slate-950/70 p-4 space-y-2 text-xs">
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="assessmentConsent"
+                checked={consentAcknowledged}
+                onChange={(e) => setConsentAcknowledged(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-white/20 bg-slate-800 text-violet-600 focus:ring-violet-500/20 cursor-pointer accent-violet-600 shrink-0"
+              />
+              <label htmlFor="assessmentConsent" className="text-slate-300 leading-relaxed cursor-pointer text-xs">
+                I acknowledge that my responses will be evaluated locally by Ollama AI against structured workplace competency rubrics. I understand these scores are advisory formative development guides, not certified psychometrics or automated hiring decisions.
+              </label>
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-wrap justify-between gap-3 pt-2">
           <Button
             variant="outline"
             disabled={index === 0 || busy}
             onClick={() => setIndex((i) => i - 1)}
+            className="rounded-full border-white/10 bg-slate-800/80 hover:bg-slate-700 text-xs text-slate-200"
           >
+            <ArrowLeft className="h-3.5 w-3.5 mr-1" />
             Previous
           </Button>
+
           {index < questions.length - 1 ? (
-            <Button
+            <button
               disabled={busy || !(answers[index] || "").trim()}
               onClick={() => setIndex((i) => i + 1)}
+              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-2.5 text-xs font-semibold text-white shadow-md shadow-violet-500/20 hover:brightness-110 active:scale-[0.98] disabled:opacity-40 cursor-pointer"
             >
-              Next scenario
-            </Button>
+              <span>Next Scenario</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
           ) : (
-            <Button
-              disabled={busy || answers.every((a) => !a.trim())}
+            <button
+              disabled={busy || answers.every((a) => !a.trim()) || !consentAcknowledged}
               onClick={submit}
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 px-7 py-2.5 text-xs font-semibold text-white shadow-lg shadow-emerald-500/25 hover:brightness-110 active:scale-[0.98] disabled:opacity-40 cursor-pointer"
             >
-              {busy ? "Evaluating with Ollama…" : "Complete assessment"}
-            </Button>
+              {busy ? (
+                <>
+                  <Cpu className="h-4 w-4 animate-spin" />
+                  <span>Evaluating with Ollama AI…</span>
+                </>
+              ) : (
+                <>
+                  <span>Complete Assessment</span>
+                  <CheckCircle2 className="h-4 w-4" />
+                </>
+              )}
+            </button>
           )}
         </div>
 
         {error && (
-          <p role="alert" className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
-            {error}
-          </p>
+          <div role="alert" className="flex items-start gap-2.5 rounded-xl border border-rose-800/40 bg-rose-950/40 p-3.5 text-xs text-rose-300">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-rose-400" />
+            <span>{error}</span>
+          </div>
         )}
 
-        <p className="text-xs text-muted-foreground">
-          Your responses are evaluated by a local Ollama model against scenario-specific criteria.
-          Ensure Ollama is running with the configured model before submitting.
-        </p>
+        <div className="flex items-center gap-2 text-[11px] text-slate-500 pt-2 border-t border-white/5">
+          <Cpu className="h-3.5 w-3.5 text-violet-400 shrink-0" />
+          <span>
+            Responses are evaluated locally by Ollama AI (`qwen3:4b`). No answers or private reflections leave your machine.
+          </span>
+        </div>
       </CardContent>
     </Card>
   );

@@ -17,7 +17,7 @@ function getStatus(seconds, scenarioCount) {
     return {
       headline: "Analysing your responses",
       subline: "Your answers are being analysed against workplace competency rubrics.",
-      detail: `Evaluating ${scenarioCount} scenario${scenarioCount > 1 ? "s" : ""} sequentially with local Ollama AI (qwen3:4b).`,
+      detail: `Evaluating ${scenarioCount} scenario${scenarioCount > 1 ? "s" : ""} sequentially with AI-powered evaluation.`,
     };
   }
   if (seconds < 60) {
@@ -99,3 +99,117 @@ test("prevent duplicate submissions guard logic operates synchronously", () => {
   assert.equal(handleTrigger(), true);
   assert.equal(submissionCount, 2);
 });
+
+// 3-minute per-question countdown tests
+function formatCountdown(totalSeconds) {
+  const m = Math.floor(Math.max(0, totalSeconds) / 60);
+  const s = Math.max(0, totalSeconds) % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+test("per-question timer formatCountdown formats 3 minutes correctly", () => {
+  assert.equal(formatCountdown(180), "03:00");
+  assert.equal(formatCountdown(179), "02:59");
+  assert.equal(formatCountdown(120), "02:00");
+  assert.equal(formatCountdown(90), "01:30");
+  assert.equal(formatCountdown(60), "01:00");
+  assert.equal(formatCountdown(30), "00:30");
+  assert.equal(formatCountdown(9), "00:09");
+  assert.equal(formatCountdown(0), "00:00");
+  assert.equal(formatCountdown(-5), "00:00");
+});
+
+test("question timeout transition preserves student answer and advances to next question", () => {
+  const totalQuestions = 3;
+  let currentIndex = 0;
+  let answers = ["I would clarify the blocker and schedule a sync.", "", ""];
+
+  function onTimeExpire() {
+    const currentAnswer = (answers[currentIndex] || "").trim();
+    if (!currentAnswer) {
+      answers[currentIndex] = "[Unanswered - Time expired]";
+    }
+    if (currentIndex < totalQuestions - 1) {
+      currentIndex++;
+      return { action: "advanced", nextIndex: currentIndex, answers };
+    } else {
+      return { action: "submitted", answers };
+    }
+  }
+
+  const result1 = onTimeExpire();
+  assert.equal(result1.action, "advanced");
+  assert.equal(result1.nextIndex, 1);
+  assert.equal(answers[0], "I would clarify the blocker and schedule a sync.");
+  assert.equal(answers[1], "");
+});
+
+test("question timeout marks empty question as unanswered and advances", () => {
+  const totalQuestions = 3;
+  let currentIndex = 1;
+  let answers = ["Existing answer", "", ""];
+
+  function onTimeExpire() {
+    const currentAnswer = (answers[currentIndex] || "").trim();
+    if (!currentAnswer) {
+      answers[currentIndex] = "[Unanswered - Time expired]";
+    }
+    if (currentIndex < totalQuestions - 1) {
+      currentIndex++;
+      return { action: "advanced", nextIndex: currentIndex, answers };
+    } else {
+      return { action: "submitted", answers };
+    }
+  }
+
+  const result2 = onTimeExpire();
+  assert.equal(result2.action, "advanced");
+  assert.equal(result2.nextIndex, 2);
+  assert.equal(answers[1], "[Unanswered - Time expired]");
+});
+
+test("question timeout on final question triggers automatic submission", () => {
+  const totalQuestions = 3;
+  let currentIndex = 2;
+  let answers = ["Answer 1", "Answer 2", ""];
+  let submittedPayload = null;
+
+  function onTimeExpire() {
+    const currentAnswer = (answers[currentIndex] || "").trim();
+    if (!currentAnswer) {
+      answers[currentIndex] = "[Unanswered - Time expired]";
+    }
+    if (currentIndex < totalQuestions - 1) {
+      currentIndex++;
+    } else {
+      submittedPayload = {
+        answers: [...answers],
+        isAutoSubmitted: true,
+      };
+    }
+  }
+
+  onTimeExpire();
+  assert.ok(submittedPayload);
+  assert.equal(submittedPayload.isAutoSubmitted, true);
+  assert.equal(submittedPayload.answers[2], "[Unanswered - Time expired]");
+});
+
+test("question navigation resets timer to 3 minutes (180 seconds)", () => {
+  let timerSeconds = 45; // Partially elapsed on Question 1
+
+  function navigateToQuestion(newIndex) {
+    timerSeconds = 180; // Reset to 3 minutes
+    return { index: newIndex, timerSeconds };
+  }
+
+  const nextNav = navigateToQuestion(1);
+  assert.equal(nextNav.timerSeconds, 180);
+  assert.equal(formatCountdown(nextNav.timerSeconds), "03:00");
+
+  timerSeconds = 12;
+  const prevNav = navigateToQuestion(0);
+  assert.equal(prevNav.timerSeconds, 180);
+  assert.equal(formatCountdown(prevNav.timerSeconds), "03:00");
+});
+

@@ -119,7 +119,7 @@ export default function PrivacyPolicyPage() {
               <span>Zero Cloud AI Transmission</span>
             </div>
             <p className="text-slate-300 text-xs sm:text-sm">
-              Candidate responses and assessment evaluations are executed using a <strong>locally deployed Ollama instance</strong> (<code className="text-violet-300">qwen3:4b</code>) hosted in the same infrastructure as the application server.
+              Candidate responses and assessment evaluations are executed using a <strong>secure, on-premise AI evaluation engine</strong> hosted in the same infrastructure as the application server.
             </p>
             <ul className="list-disc list-inside text-xs text-slate-400 space-y-1">
               <li>Candidate answers are <strong className="text-slate-200">never transmitted to external commercial AI providers</strong> (e.g. OpenAI, Anthropic, or Google Gemini).</li>

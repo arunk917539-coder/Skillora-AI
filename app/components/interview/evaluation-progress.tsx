@@ -46,13 +46,13 @@ export function EvaluationProgress({
     };
   }, [startTime]);
 
-  // Contextual status messages reflecting real local Ollama processing stages
+  // Contextual status messages reflecting real AI evaluation processing stages
   const getStatus = (seconds: number) => {
     if (seconds < 25) {
       return {
         headline: "Analysing your responses",
         subline: "Your answers are being analysed against workplace competency rubrics.",
-        detail: `Evaluating ${scenarioCount} scenario${scenarioCount > 1 ? "s" : ""} sequentially with local Ollama AI (qwen3:4b).`,
+        detail: `Evaluating ${scenarioCount} scenario${scenarioCount > 1 ? "s" : ""} sequentially with AI-powered evaluation.`,
       };
     }
     if (seconds < 60) {
@@ -173,7 +173,7 @@ export function EvaluationProgress({
           </div>
         </div>
 
-        {/* Honest Estimated Completion & Model Information */}
+        {/* Honest Estimated Completion & Evaluation Information */}
         <div className="rounded-2xl border border-white/5 bg-slate-950/60 p-4 space-y-2 text-xs">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
             <span className="text-slate-400 font-medium">Estimated time remaining:</span>
@@ -183,7 +183,7 @@ export function EvaluationProgress({
             </span>
           </div>
           <p className="text-[11px] text-slate-400 leading-relaxed">
-            Evaluation is performed sequentially for each scenario by local Ollama (<code className="text-violet-300 font-mono">qwen3:4b</code>). Inference duration depends on answer length and local processor load. No external servers or cloud services are contacted.
+            Evaluation is performed sequentially for each scenario by on-premise AI evaluation. Inference duration depends on answer length and local processor load. No external servers or cloud services are contacted.
           </p>
         </div>
 

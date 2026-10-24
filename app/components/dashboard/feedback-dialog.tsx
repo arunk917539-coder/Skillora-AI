@@ -59,7 +59,7 @@ export function FeedBackDialog({
           <DevelopmentPlan items={recommendations ?? []} />
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-slate-500 pt-2 border-t border-white/5">
-            <span>Ollama AI feedback is rubric-based and formative, designed for deliberate workplace practice rather than formal employee evaluations.</span>
+            <span>AI evaluation feedback is rubric-based and formative, designed for deliberate workplace practice rather than formal employee evaluations.</span>
             <a href="/privacy" className="text-violet-400 hover:underline shrink-0 font-medium">Request Review</a>
           </div>
         </div>

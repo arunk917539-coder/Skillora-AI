@@ -117,7 +117,7 @@ const CreateInterviewForm = () => {
           </CardTitle>
 
           <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-            Explore authentic workplace scenarios and reflect on your approach. Evaluation uses your local Ollama model (`qwen3:4b`); no hosted API keys required.
+            Explore authentic workplace scenarios and reflect on your approach. Evaluation uses secure on-device AI evaluation; no external API keys required.
           </p>
 
           <div className="flex items-start gap-2.5 rounded-xl border border-amber-500/25 bg-amber-950/25 p-3 text-xs text-amber-200/90 leading-relaxed">
@@ -430,7 +430,7 @@ const CreateInterviewForm = () => {
             </button>
 
             <p className="text-center text-[11px] text-slate-500 pt-1">
-              Assessment responses are processed on-premise by our local Ollama AI model. Review our{" "}
+              Assessment responses are processed securely by our on-premise AI evaluation engine. Review our{" "}
               <a href="/privacy" target="_blank" className="text-violet-400 hover:underline">
                 Privacy Policy
               </a>.

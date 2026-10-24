@@ -20,7 +20,7 @@ const ShowcaseBanner2 = () => {
           </h3>
 
           <p className="text-base sm:text-lg text-slate-300 leading-relaxed">
-            Work through authentic workplace challenges, review your verified evidence snippets, and receive concrete development recommendations for your next attempt. Skillora AI leverages local Ollama AI to generate rubric-guided practice feedback without compromising privacy.
+            Work through authentic workplace challenges, review your verified evidence snippets, and receive concrete development recommendations for your next attempt. Skillora AI leverages on-device AI evaluation to generate rubric-guided practice feedback without compromising privacy.
           </p>
 
           <div className="grid sm:grid-cols-3 gap-3 pt-2 text-xs text-slate-400">

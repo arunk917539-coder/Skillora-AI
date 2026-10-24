@@ -53,7 +53,7 @@ const Footer = () => {
           <div className="flex flex-col gap-2.5">
             <span className="font-semibold text-white tracking-wide text-xs uppercase">About & AI Notice</span>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Skillora AI provides rubric-based formative feedback using a local Ollama model. Evaluations are advisory learning aids and must not serve as the sole basis for automated employment or hiring decisions.
+              Skillora AI provides rubric-based formative feedback using on-device AI evaluation. Evaluations are advisory learning aids and must not serve as the sole basis for automated employment or hiring decisions.
             </p>
           </div>
         </div>

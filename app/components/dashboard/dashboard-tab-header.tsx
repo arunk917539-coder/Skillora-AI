@@ -34,7 +34,7 @@ const DashboardTabHeader = (props: DashboardHeaderProps) => {
     {
       label: "Completed",
       value: formatNumber(completed),
-      description: "Evaluated with Ollama",
+      description: "Evaluated with AI",
       icon: CheckCircle2,
       accent: "text-emerald-400 border-emerald-500/30 bg-emerald-950/30",
       glow: "from-emerald-500/10 to-transparent",

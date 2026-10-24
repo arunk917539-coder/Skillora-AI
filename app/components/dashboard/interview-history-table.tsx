@@ -277,7 +277,7 @@ export function InterviewHistoryTable({ globalFilterValue, query }: InterviewHis
           </div>
           <p className="font-semibold text-white">We couldn’t load your assessment history.</p>
           <p className="text-xs text-slate-400">
-            {query.error?.message || "Check your local server connection or Ollama service and try again."}
+            {query.error?.message || "Check your network connection or server service and try again."}
           </p>
           <Button
             variant="outline"

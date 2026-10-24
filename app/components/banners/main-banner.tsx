@@ -23,7 +23,7 @@ const MainBanner = () => {
           </h1>
 
           <p className="text-center xl:text-left text-base sm:text-lg text-slate-300 leading-relaxed font-normal">
-            Explore authentic workplace scenarios, reflect on your reasoning, and receive explainable rubric feedback powered by a local Ollama model. Designed for continuous behavioural skill development, reflective growth, and transparent competency signals.
+            Explore authentic workplace scenarios, reflect on your reasoning, and receive explainable rubric feedback powered by on-device AI evaluation. Designed for continuous behavioural skill development, reflective growth, and transparent competency signals.
           </p>
         </div>
 
@@ -31,7 +31,7 @@ const MainBanner = () => {
         <div className="flex flex-wrap justify-center xl:justify-start gap-4 text-xs text-slate-300">
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 bg-slate-900/60 backdrop-blur">
             <Cpu className="h-4 w-4 text-cyan-400" />
-            <span>Local Ollama (qwen3:4b)</span>
+            <span>On-Device AI Engine</span>
           </div>
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 bg-slate-900/60 backdrop-blur">
             <ShieldCheck className="h-4 w-4 text-emerald-400" />

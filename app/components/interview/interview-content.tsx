@@ -8,7 +8,7 @@ import { DevelopmentPlan } from "@/app/components/dashboard/development-plan";
 import type { DevelopmentAction } from "@/app/lib/workplace/development-plans";
 import type { CompetencyScores } from "@/app/lib/workplace/scoring";
 import { parseStoredArray, parseStoredNumberRecord } from "@/app/lib/workplace/safe-json";
-import { ArrowLeft, ArrowRight, CheckCircle2, AlertCircle, Sparkles, Target, Cpu, ShieldAlert, RefreshCw } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, AlertCircle, Sparkles, Target, Cpu, ShieldAlert, RefreshCw, Clock } from "lucide-react";
 import Link from "next/link";
 import { EvaluationProgress } from "./evaluation-progress";
 
@@ -54,6 +54,14 @@ type Assessment = {
   } | null;
 };
 
+const QUESTION_TIME_LIMIT_SECONDS = 180; // 3 minutes per question
+
+function formatCountdown(totalSeconds: number): string {
+  const m = Math.floor(Math.max(0, totalSeconds) / 60);
+  const s = Math.max(0, totalSeconds) % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
 export default function InterviewContent({ assessment }: { assessment: Assessment }) {
   const router = useRouter();
   const questions = Array.isArray(assessment.questions) ? assessment.questions : [];
@@ -83,6 +91,7 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
   const [submissionStartTime, setSubmissionStartTime] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [consentAcknowledged, setConsentAcknowledged] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<number>(QUESTION_TIME_LIMIT_SECONDS);
   const [result, setResult] = useState<{
     average: number;
     feedback: string;
@@ -93,6 +102,22 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
 
   const isSubmittingRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const answersRef = useRef(answers);
+  const indexRef = useRef(index);
+  const busyRef = useRef(busy);
+  const isTransitioningRef = useRef(false);
+
+  useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
+
+  useEffect(() => {
+    indexRef.current = index;
+  }, [index]);
+
+  useEffect(() => {
+    busyRef.current = busy;
+  }, [busy]);
 
   // Prevent accidental tab closure or reload during running AI evaluation
   useEffect(() => {
@@ -118,10 +143,13 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
     setError("Assessment evaluation was cancelled. You can review or edit your answers before submitting again.");
   };
 
-  async function submit() {
-    if (isSubmittingRef.current || busy) return;
+  async function submit(overrideAnswers?: string[]) {
+    if (isSubmittingRef.current || busyRef.current) return;
 
-    if (!consentAcknowledged) {
+    const answersToSubmit = overrideAnswers || answersRef.current;
+    const isAutoSubmit = Boolean(overrideAnswers);
+
+    if (!consentAcknowledged && !isAutoSubmit) {
       setError("Please acknowledge the AI evaluation notice before submitting.");
       return;
     }
@@ -132,6 +160,9 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
     setBusy(true);
     setSubmissionStartTime(Date.now());
     setError("");
+    if (isAutoSubmit) {
+      setConsentAcknowledged(true);
+    }
 
     try {
       const response = await fetch("/api/interview/complete", {
@@ -143,7 +174,7 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
           consentAcknowledged: true,
           answers: questions.map((question, i) => ({
             question,
-            answer: answers[i] || "",
+            answer: (answersToSubmit[i] || "").trim() || "[Unanswered - Time expired]",
           })),
         }),
       });
@@ -168,6 +199,56 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
       abortControllerRef.current = null;
     }
   }
+
+  // Handle question time expiration (3-minute limit reached)
+  const handleTimeExpire = () => {
+    if (isTransitioningRef.current || isSubmittingRef.current || busyRef.current) return;
+    isTransitioningRef.current = true;
+
+    const currIdx = indexRef.current;
+    const currentAnswer = (answersRef.current[currIdx] || "").trim();
+    const updatedAnswers = [...answersRef.current];
+
+    if (!currentAnswer) {
+      updatedAnswers[currIdx] = "[Unanswered - Time expired]";
+    }
+    setAnswers(updatedAnswers);
+    answersRef.current = updatedAnswers;
+
+    if (currIdx >= questions.length - 1) {
+      // Auto-submit when time expires on the final question
+      submit(updatedAnswers);
+    } else {
+      // Auto-advance to the next question
+      setIndex((prev) => Math.min(questions.length - 1, prev + 1));
+    }
+  };
+
+  // 3-minute per-question countdown timer: resets for each question, pauses on submit/complete
+  useEffect(() => {
+    if (assessment.isCompleted || result || busy) {
+      return;
+    }
+
+    isTransitioningRef.current = false;
+    setTimeLeft(QUESTION_TIME_LIMIT_SECONDS);
+    const startTime = Date.now();
+
+    const intervalId = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const remaining = Math.max(0, QUESTION_TIME_LIMIT_SECONDS - elapsed);
+      setTimeLeft(remaining);
+
+      if (remaining <= 0) {
+        clearInterval(intervalId);
+        handleTimeExpire();
+      }
+    }, 1000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [index, busy, assessment.isCompleted, result]);
 
   if (assessment.isCompleted || result) {
     const feedback =
@@ -274,7 +355,7 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
             </div>
           </div>
           <CardDescription className="text-xs text-slate-400 pt-2">
-            Detailed scenario-by-scenario evaluation and formative development guidance powered by local Ollama AI.
+            Detailed scenario-by-scenario evaluation and formative development guidance powered by AI-powered evaluation.
           </CardDescription>
         </CardHeader>
 
@@ -286,7 +367,7 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
               <span>Formative Practice Feedback Notice</span>
             </div>
             <p className="text-slate-300 text-[11px] sm:text-xs">
-              This assessment was evaluated locally using Ollama AI against structured workplace competency rubrics.
+              This assessment was evaluated securely using AI against structured workplace competency rubrics.
               Scores and insights are advisory learning tools for professional reflection, not standardized psychometrics or automated hiring decisions.
               Meaningful human review is recommended before making organizational development or assignment decisions.
             </p>
@@ -517,7 +598,7 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
           </div>
 
           <p className="text-[11px] text-slate-500 pt-2">
-            Skillora AI evaluation is rubric-guided and powered by local Ollama AI. Scores are designed for self-reflection and professional development, not for hiring or performance evaluations.
+            Skillora AI evaluation is rubric-guided and powered by AI-powered evaluation. Scores are designed for self-reflection and professional development, not for hiring or performance evaluations.
           </p>
 
           <div className="flex flex-wrap gap-3 pt-2 border-t border-white/5">
@@ -570,13 +651,31 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
 
       <Card className="mx-auto my-8 max-w-3xl border border-white/10 bg-slate-900/80 backdrop-blur-xl shadow-2xl rounded-3xl overflow-hidden">
       <CardHeader className="border-b border-white/10 p-6 sm:p-8 bg-slate-900/90 space-y-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <span className="text-xs font-semibold uppercase tracking-wider text-violet-400 bg-violet-950/60 border border-violet-500/30 px-3 py-1 rounded-full">
             {assessment.type}
           </span>
-          <span className="text-xs font-mono font-medium text-slate-400">
-            Scenario {index + 1} of {questions.length}
-          </span>
+          <div className="flex items-center gap-2.5">
+            <div
+              role="timer"
+              aria-live="polite"
+              aria-label="Time remaining for this question"
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-mono font-semibold transition-colors ${
+                timeLeft <= 30
+                  ? "border-rose-500/50 bg-rose-950/70 text-rose-300 animate-pulse"
+                  : timeLeft <= 60
+                  ? "border-amber-500/40 bg-amber-950/60 text-amber-300"
+                  : "border-violet-500/30 bg-violet-950/50 text-violet-300"
+              }`}
+            >
+              <Clock className="h-3.5 w-3.5 shrink-0" />
+              <span>{formatCountdown(timeLeft)}</span>
+              <span className="text-[10px] text-slate-400 font-sans hidden sm:inline">left</span>
+            </div>
+            <span className="text-xs font-mono font-medium text-slate-400">
+              Scenario {index + 1} of {questions.length}
+            </span>
+          </div>
         </div>
         <CardTitle className="text-xl sm:text-2xl font-bold tracking-tight text-white">
           {assessment.name}
@@ -617,7 +716,7 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
                 className="mt-0.5 h-4 w-4 rounded border-white/20 bg-slate-800 text-violet-600 focus:ring-violet-500/20 cursor-pointer accent-violet-600 shrink-0"
               />
               <label htmlFor="assessmentConsent" className="text-slate-300 leading-relaxed cursor-pointer text-xs">
-                I acknowledge that my responses will be evaluated locally by Ollama AI against structured workplace competency rubrics. I understand these scores are advisory formative development guides, not certified psychometrics or automated hiring decisions.
+                I acknowledge that my responses will be evaluated by AI against structured workplace competency rubrics. I understand these scores are advisory formative development guides, not certified psychometrics or automated hiring decisions.
               </label>
             </div>
           </div>
@@ -646,13 +745,13 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
           ) : (
             <button
               disabled={busy || answers.every((a) => !a.trim()) || !consentAcknowledged}
-              onClick={submit}
+              onClick={() => submit()}
               className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 px-7 py-2.5 text-xs font-semibold text-white shadow-lg shadow-emerald-500/25 hover:brightness-110 active:scale-[0.98] disabled:opacity-40 cursor-pointer"
             >
               {busy ? (
                 <>
                   <Cpu className="h-4 w-4 animate-spin motion-reduce:animate-none" />
-                  <span>Evaluating with Ollama AI…</span>
+                  <span>AI evaluation in progress…</span>
                 </>
               ) : (
                 <>
@@ -680,7 +779,7 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
             <button
               type="button"
               disabled={busy}
-              onClick={submit}
+              onClick={() => submit()}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-medium text-xs transition-colors shrink-0 cursor-pointer shadow-md disabled:opacity-40"
             >
               <RefreshCw className="h-3.5 w-3.5" />
@@ -692,7 +791,7 @@ export default function InterviewContent({ assessment }: { assessment: Assessmen
         <div className="flex items-center gap-2 text-[11px] text-slate-500 pt-2 border-t border-white/5">
           <Cpu className="h-3.5 w-3.5 text-violet-400 shrink-0" />
           <span>
-            Responses are evaluated locally by Ollama AI (`qwen3:4b`). No answers or private reflections leave your machine.
+            Responses are evaluated securely using on-premise AI evaluation against structured workplace competency rubrics.
           </span>
         </div>
       </CardContent>
